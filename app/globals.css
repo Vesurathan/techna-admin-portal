@@ -1,26 +1,279 @@
-@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: light;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    text-rendering: geometricPrecision;
+    @apply bg-background text-foreground;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.01em;
+  }
+
+  /* Avoid daisyUI buttons inheriting odd line-heights in some browsers */
+  button {
+    line-height: 1;
+  }
+  .theme {
+    --font-heading: var(--font-sans);
+    --font-sans: var(--font-sans);
+  }
+  .dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+  }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Improved scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #432AD5;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3622b0;
+}
+
+/* Ensure consistent spacing and alignment */
+* {
+  box-sizing: border-box;
+}
+
+/* Improve table responsiveness */
+.table {
+  width: 100%;
+}
+
+/* Improve modal responsiveness */
+.modal-box {
+  max-width: calc(100vw - 2rem);
+}
+
+@media (min-width: 640px) {
+  .modal-box {
+    max-width: calc(100vw - 4rem);
+  }
+}
+
+/* Ensure btn-primary uses the theme primary color */
+.btn.btn-primary {
+  background-color: #432AD5 !important;
+  border-color: #432AD5 !important;
+  color: #ffffff !important;
+}
+
+.btn.btn-primary:hover {
+  background-color: #3622b0 !important;
+  border-color: #3622b0 !important;
+}
+
+.btn.btn-primary:active {
+  background-color: #2a1a8b !important;
+  border-color: #2a1a8b !important;
+}
+
+/* Delete / destructive actions — consistent red across the admin portal */
+.btn.btn-delete {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
+}
+
+.btn.btn-delete:hover {
+  background-color: #b91c1c !important;
+  border-color: #b91c1c !important;
+}
+
+.btn.btn-delete:active {
+  background-color: #991b1b !important;
+  border-color: #991b1b !important;
+}
+
+.btn.btn-delete:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Ensure all inputs, selects, and textareas have visible borders */
+.input.input-bordered,
+.select.select-bordered,
+.textarea.textarea-bordered,
+.file-input.file-input-bordered {
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: hsl(var(--bc) / 0.2) !important;
+}
+
+.input.input-bordered:focus,
+.select.select-bordered:focus,
+.textarea.textarea-bordered:focus,
+.file-input.file-input-bordered:focus {
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: #432AD5 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(67, 42, 213, 0.1) !important;
+}
+
+/* Ensure inputs with border-base-300 have visible borders */
+.input.border-base-300,
+.select.border-base-300,
+.textarea.border-base-300 {
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: #e5e5e5 !important;
+}
+
+.input.border-base-300:focus,
+.select.border-base-300:focus,
+.textarea.border-base-300:focus {
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: #432AD5 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(67, 42, 213, 0.1) !important;
+}
+
+/* Dark theme border adjustments */
+[data-theme="dark"] .input.border-base-300,
+[data-theme="dark"] .select.border-base-300,
+[data-theme="dark"] .textarea.border-base-300 {
+  border-color: #3a3a3a !important;
+}
+
+@layer components {
+  /* More consistent page rhythm across screens */
+  main > * {
+    max-width: 100%;
+  }
+
+  /* Tables: improve header contrast and alignment */
+  .table thead th {
+    font-weight: 600;
+    color: hsl(var(--bc) / 0.75);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  /* Buttons: consistent icon/text alignment and sizing */
+  .btn {
+    font-weight: 600;
+    border-radius: 0.75rem;
+  }
+
+  .btn.btn-sm {
+    border-radius: 0.625rem;
+  }
+
+  .btn :where(svg) {
+    flex-shrink: 0;
+  }
+
+  /* Inputs: slightly more premium feel */
+  .input,
+  .select,
+  .textarea,
+  .file-input {
+    border-radius: 0.75rem;
+  }
+
+  .input:focus,
+  .select:focus,
+  .textarea:focus,
+  .file-input:focus {
+    box-shadow: 0 0 0 3px rgba(67, 42, 213, 0.14) !important;
+  }
 }
