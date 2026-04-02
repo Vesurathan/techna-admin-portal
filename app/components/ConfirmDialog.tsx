@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle, Trash2, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export type ConfirmDialogTone = "danger" | "warning";
 
@@ -34,8 +37,6 @@ export function ConfirmDialog({
     if (!open) setPending(false);
   }, [open]);
 
-  if (!open) return null;
-
   const handleConfirm = async () => {
     if (pending) return;
     setPending(true);
@@ -49,68 +50,63 @@ export function ConfirmDialog({
   const Icon = icon === "alert" ? AlertTriangle : Trash2;
   const iconWrap =
     tone === "warning"
-      ? "bg-warning/12 text-warning"
-      : "bg-error/10 text-error";
-
-  const confirmClass =
-    tone === "warning"
-      ? "btn btn-warning btn-sm min-h-9 h-9 px-4 border-0 text-warning-content hover:brightness-95"
-      : "btn btn-delete btn-sm min-h-9 h-9 px-4";
+      ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+      : "bg-destructive/10 text-destructive";
 
   return (
-    <dialog className="modal modal-open z-[100]" aria-modal="true" role="alertdialog">
-      <div className="modal-box w-full max-w-[min(100vw-2rem,22rem)] rounded-xl border border-base-300 bg-base-100 p-0 shadow-xl">
-        <div className="relative px-4 pt-4 pb-3">
-          <button
+    <Dialog open={open} onOpenChange={(next) => !next && !pending && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        overlayClassName="bg-black/45 backdrop-blur-md dark:bg-black/55"
+        className="z-[100] max-w-[min(100vw-2rem,22rem)] gap-0 overflow-hidden p-0 sm:max-w-[min(100vw-2rem,22rem)]"
+      >
+        <DialogHeader className="relative space-y-0 px-4 pt-4 pb-3 text-left">
+          <Button
             type="button"
-            className="btn btn-ghost btn-xs btn-circle absolute right-2 top-2 text-base-content/50 hover:text-base-content"
+            variant="ghost"
+            size="icon-xs"
+            className="absolute right-1 top-1 text-muted-foreground hover:text-foreground"
             onClick={onClose}
             disabled={pending}
             aria-label="Close"
           >
             <X className="h-4 w-4" />
-          </button>
+          </Button>
           <div className="flex gap-3 pr-8">
             <div
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${iconWrap}`}
+              className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                iconWrap
+              )}
             >
               <Icon className="h-4 w-4" aria-hidden />
             </div>
             <div className="min-w-0 flex-1 pt-0.5">
-              <h3 className="text-sm font-semibold leading-tight text-base-content">{title}</h3>
-              <div className="mt-1.5 text-xs leading-snug text-base-content/65">{description}</div>
+              <DialogTitle className="text-sm font-semibold leading-tight">{title}</DialogTitle>
+              <div className="mt-1.5 text-xs leading-snug text-muted-foreground">{description}</div>
             </div>
           </div>
-        </div>
-        <div className="flex justify-end gap-2 border-t border-base-200 px-4 py-3">
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm min-h-9 h-9 px-3"
-            onClick={onClose}
-            disabled={pending}
-          >
+        </DialogHeader>
+        <div className="flex justify-end gap-2 border-t border-border bg-muted/40 px-4 py-3">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={pending}>
             {cancelLabel}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className={`${confirmClass} gap-1.5`}
-            onClick={handleConfirm}
+            size="sm"
             disabled={pending}
+            onClick={handleConfirm}
+            className={
+              tone === "warning"
+                ? "bg-amber-500 text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500"
+                : "bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500"
+            }
           >
-            {pending ? <span className="loading loading-spinner loading-xs" /> : null}
+            {pending ? <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : null}
             <span className="whitespace-nowrap">{confirmLabel}</span>
-          </button>
+          </Button>
         </div>
-      </div>
-      <form
-        method="dialog"
-        className="modal-backdrop bg-black/45 backdrop-blur-[2px]"
-        onClick={onClose}
-      >
-        <button type="button" className="sr-only">
-          Close
-        </button>
-      </form>
-    </dialog>
+      </DialogContent>
+    </Dialog>
   );
 }

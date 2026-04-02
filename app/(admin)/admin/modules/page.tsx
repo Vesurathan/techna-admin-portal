@@ -26,8 +26,10 @@ import { formatCurrency } from "@/app/utils/currency";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
 import { RecordDetailModal, RecordDetailSectionTitle } from "@/app/components/RecordDetailModal";
 import Pagination from "@/app/components/Pagination";
+import { useAppNotice } from "@/app/contexts/AppNoticeContext";
 
 export default function ModulesPage() {
+  const { showNotice } = useAppNotice();
   const [modules, setModules] = useState<Module[]>([]);
   const [staffs, setStaffs] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,7 +177,10 @@ export default function ModulesPage() {
       await loadData(currentPage);
       closeModal();
     } catch (error: any) {
-      alert(error.message || "Failed to save module");
+      showNotice({
+        message: error.message || "Failed to save module",
+        variant: "error",
+      });
     }
   };
 
@@ -186,7 +191,10 @@ export default function ModulesPage() {
       await loadData(currentPage);
       setDeleteTarget(null);
     } catch (error: any) {
-      alert(error.message || "Failed to delete module");
+      showNotice({
+        message: error.message || "Failed to delete module",
+        variant: "error",
+      });
     }
   };
 
@@ -195,8 +203,8 @@ export default function ModulesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-base-content">Modules</h1>
-          <p className="text-base-content/70 mt-2">
+          <h1 className="text-3xl font-bold text-foreground">Modules</h1>
+          <p className="text-muted-foreground mt-2">
             Manage modules, staff assignments, and pricing
           </p>
         </div>
@@ -214,7 +222,7 @@ export default function ModulesPage() {
       </div>
 
       {/* Search and Filter */}
-      <div className="card bg-base-100 border border-base-300 shadow-sm">
+      <div className="card bg-card border border-border shadow-sm">
         <div className="card-body p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="form-control flex-1 min-w-0">
@@ -222,7 +230,7 @@ export default function ModulesPage() {
                 <input
                   type="text"
                   placeholder="Search modules..."
-                  className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="input input-bordered w-full border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -242,7 +250,7 @@ export default function ModulesPage() {
       </div>
 
       {/* Modules Table */}
-      <div className="card bg-base-100 border border-base-300 shadow-md">
+      <div className="card bg-card border border-border shadow-md">
         <div className="card-body p-0">
           {loading ? (
             <div className="flex justify-center py-12">
@@ -250,11 +258,11 @@ export default function ModulesPage() {
             </div>
           ) : filteredModules.length === 0 ? (
             <div className="text-center py-12">
-              <BookOpen className="h-16 w-16 mx-auto text-base-content/30 mb-4" />
-              <h3 className="text-xl font-semibold text-base-content mb-2">
+              <BookOpen className="h-16 w-16 mx-auto text-foreground/30 mb-4" />
+              <h3 className="text-xl font-semibold text-foreground mb-2">
                 No modules found
               </h3>
-              <p className="text-base-content/70 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Create your first module to get started
               </p>
               <button className="btn btn-primary gap-2 items-center px-6" onClick={openCreate}>
@@ -266,13 +274,13 @@ export default function ModulesPage() {
             <div className="overflow-x-auto">
               <table className="table table-zebra w-full">
                 <thead>
-                  <tr className="bg-base-200">
-                    <th className="text-base-content font-semibold whitespace-nowrap">Module</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap">Category</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap">Sub Modules</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap">Amount</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap">Staffs</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap text-right">Actions</th>
+                  <tr className="bg-muted">
+                    <th className="text-foreground font-semibold whitespace-nowrap">Module</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">Category</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">Sub Modules</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">Amount</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">Staffs</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -284,10 +292,10 @@ export default function ModulesPage() {
                             <BookOpen className="h-5 w-5 text-primary" />
                           </div>
                           <div className="min-w-0">
-                            <div className="font-semibold text-base-content truncate">
+                            <div className="font-semibold text-foreground truncate">
                               {module.name}
                             </div>
-                            <div className="text-sm text-base-content/70">
+                            <div className="text-sm text-muted-foreground">
                               ID: MOD-{module.id}
                             </div>
                           </div>
@@ -299,16 +307,16 @@ export default function ModulesPage() {
                             ?.label || module.category}
                         </span>
                       </td>
-                      <td className="text-base-content font-semibold whitespace-nowrap">
+                      <td className="text-foreground font-semibold whitespace-nowrap">
                         {module.subModulesCount}
                       </td>
-                      <td className="text-base-content font-semibold whitespace-nowrap">
+                      <td className="text-foreground font-semibold whitespace-nowrap">
                         {formatCurrency(module.amount)}
                       </td>
                       <td>
                         <div className="flex flex-wrap gap-1 max-w-[200px]">
                           {module.staffs.length === 0 ? (
-                            <span className="text-base-content/50 text-sm">
+                            <span className="text-muted-foreground text-sm">
                               No staff assigned
                             </span>
                           ) : (
@@ -375,19 +383,18 @@ export default function ModulesPage() {
       {/* Create/Edit Modal */}
       {modalMode && modalMode !== "view" && (
         <dialog className="modal modal-open">
-          <div className="modal-box bg-base-100 border border-base-300 max-w-2xl w-full mx-4">
-            <h3 className="text-lg font-bold mb-4 text-base-content">
-              {modalMode === "edit" ? "Edit Module" : "Create New Module"}
-            </h3>
+          <div className="modal-box bg-card border border-border max-w-2xl w-full mx-4">
+            <h3>{modalMode === "edit" ? "Edit Module" : "Create New Module"}</h3>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="admin-form-section space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Module Name</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Module Name</span>
                   </label>
                   <input
                     type="text"
-                    className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
@@ -397,11 +404,11 @@ export default function ModulesPage() {
                 </div>
 
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Category</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Category</span>
                   </label>
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={formData.category}
                     onChange={(e) =>
                       setFormData({
@@ -419,14 +426,14 @@ export default function ModulesPage() {
                 </div>
 
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">
                       No. of Sub Modules
                     </span>
                   </label>
                   <input
                     type="number"
-                    className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={formData.subModulesCount}
                     onChange={(e) =>
                       setFormData({
@@ -439,12 +446,12 @@ export default function ModulesPage() {
                 </div>
 
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Amount</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Amount</span>
                   </label>
                   <input
                     type="number"
-                    className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={formData.amount}
                     onChange={(e) =>
                       setFormData({
@@ -459,14 +466,14 @@ export default function ModulesPage() {
               </div>
 
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">
                     Staff (Multiple Selection)
                   </span>
                 </label>
                 <select
                   multiple
-                  className="select select-bordered w-full h-32 border-base-300 focus:border-primary focus:outline-none"
+                  className="select select-bordered w-full h-32 border-border focus:border-primary focus:outline-none"
                   value={formData.staffIds}
                   onChange={(e) => {
                     const values = Array.from(
@@ -482,13 +489,14 @@ export default function ModulesPage() {
                   ))}
                 </select>
                 <label className="label pt-1">
-                  <span className="label-text-alt text-base-content/70">
+                  <span className="label-text-alt text-muted-foreground">
                     Hold Ctrl/Cmd to select multiple teachers
                   </span>
                 </label>
               </div>
+              </div>
 
-              <div className="modal-action flex justify-end gap-3 mt-8">
+              <div className="modal-action">
                 <button
                   type="button"
                   className="btn btn-ghost gap-2 px-6"
@@ -540,18 +548,18 @@ export default function ModulesPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-3">
               <div>
-                <p className="text-xs text-base-content/60">Category</p>
-                <p className="text-sm font-medium text-base-content">
+                <p className="text-xs text-muted-foreground">Category</p>
+                <p className="text-sm font-medium text-foreground">
                   {categoryOptions.find((c) => c.value === selectedModule.category)?.label}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-base-content/60">Sub-modules</p>
-                <p className="text-sm font-medium text-base-content">{selectedModule.subModulesCount}</p>
+                <p className="text-xs text-muted-foreground">Sub-modules</p>
+                <p className="text-sm font-medium text-foreground">{selectedModule.subModulesCount}</p>
               </div>
               <div className="sm:col-span-2">
-                <p className="text-xs text-base-content/60">Amount</p>
-                <p className="text-sm font-medium text-base-content">{formatCurrency(selectedModule.amount)}</p>
+                <p className="text-xs text-muted-foreground">Amount</p>
+                <p className="text-sm font-medium text-foreground">{formatCurrency(selectedModule.amount)}</p>
               </div>
             </div>
 
@@ -559,7 +567,7 @@ export default function ModulesPage() {
               <RecordDetailSectionTitle>Assigned staff</RecordDetailSectionTitle>
               <div className="flex flex-wrap gap-1.5">
                 {selectedModule.staffs.length === 0 ? (
-                  <span className="text-sm text-base-content/50">No staff assigned</span>
+                  <span className="text-sm text-muted-foreground">No staff assigned</span>
                 ) : (
                   selectedModule.staffs.map((staff) => (
                     <span key={staff.id} className="badge badge-primary badge-sm">
@@ -578,7 +586,7 @@ export default function ModulesPage() {
         title="Delete module?"
         description={
           <>
-            Remove <span className="font-medium text-base-content">{deleteTarget?.name}</span>. This
+            Remove <span className="font-medium text-foreground">{deleteTarget?.name}</span>. This
             cannot be undone.
           </>
         }

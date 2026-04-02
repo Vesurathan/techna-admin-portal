@@ -3,6 +3,16 @@
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { Moon, Sun, User, LogOut, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
@@ -14,81 +24,55 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-base-300 bg-base-100/90 px-4 sm:px-6 lg:px-8 backdrop-blur">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur-md sm:px-6 lg:px-8">
       <div className="flex items-center gap-4">
-        <h2 className="text-lg font-semibold text-base-content whitespace-nowrap">
+        <h2 className="whitespace-nowrap text-lg font-semibold text-foreground">
           Techna Technical Institute
         </h2>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Theme Toggle */}
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="shrink-0 sm:size-9"
           onClick={toggleTheme}
-          className="btn btn-ghost btn-circle btn-sm sm:btn-md flex-shrink-0"
           aria-label="Toggle theme"
           title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         >
-          {theme === "dark" ? (
-            <Sun className="h-5 w-5" />
-          ) : (
-            <Moon className="h-5 w-5" />
-          )}
-        </button>
+          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </Button>
 
-        {/* User Menu */}
-        <div className="dropdown dropdown-end">
-          <div
-            tabIndex={0}
-            role="button"
-            className="btn btn-ghost flex items-center gap-2 min-w-0 px-2 sm:px-3 flex-shrink-0"
-          >
-            <div className="avatar placeholder flex-shrink-0">
-              <div className="bg-primary text-primary-content rounded-full w-8 sm:w-10 h-8 sm:h-10 flex items-center justify-center">
-                <span className="text-xs sm:text-sm font-semibold">
-                  {user?.name?.charAt(0).toUpperCase() || "U"}
-                </span>
-              </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="inline-flex min-w-0 max-w-full shrink-0 items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-1.5 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring sm:px-3">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground sm:size-10 sm:text-sm">
+              {user?.name?.charAt(0).toUpperCase() || "U"}
             </div>
-            <div className="hidden sm:flex flex-col items-start text-sm min-w-0 max-w-[140px]">
-              <span className="font-semibold text-base-content truncate w-full">
-                {user?.name}
-              </span>
-              <span className="text-xs opacity-70 text-base-content/70 truncate w-full">
-                {user?.role.name}
-              </span>
+            <div className="hidden min-w-0 max-w-[140px] flex-col items-start text-sm sm:flex">
+              <span className="w-full truncate font-semibold text-foreground">{user?.name}</span>
+              <span className="w-full truncate text-xs text-muted-foreground">{user?.role.name}</span>
             </div>
-          </div>
-          <ul
-            tabIndex={0}
-            className="menu dropdown-content z-[1] w-56 rounded-box bg-base-100 border border-base-300 p-2 shadow-xl mt-2"
-          >
-            <li className="menu-title">
-              <span className="text-base-content/70">Account</span>
-            </li>
-            <li>
-              <a className="flex items-center gap-3 text-base-content hover:bg-base-200">
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-56">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Account</DropdownMenuLabel>
+              <DropdownMenuItem>
                 <User className="h-4 w-4" />
-                <span>Profile</span>
-              </a>
-            </li>
-            <li>
-              <a className="flex items-center gap-3 text-base-content hover:bg-base-200">
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem>
                 <Settings className="h-4 w-4" />
-                <span>Settings</span>
-              </a>
-            </li>
-            <li className="border-t border-base-300 mt-2 pt-2">
-              <a
-                onClick={handleLogout}
-                className="flex items-center gap-3 text-error hover:bg-error/10 cursor-pointer"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Logout</span>
-              </a>
-            </li>
-          </ul>
-        </div>
+                Settings
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+              <LogOut className="h-4 w-4" />
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

@@ -25,6 +25,7 @@ import { formatCurrency } from "@/app/utils/currency";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
 import { RecordDetailModal, RecordDetailSectionTitle } from "@/app/components/RecordDetailModal";
 import { IconTab, IconTabs } from "@/app/components/IconTabs";
+import { useAppNotice } from "@/app/contexts/AppNoticeContext";
 
 interface Student {
   id: string;
@@ -69,6 +70,7 @@ interface Payment {
 }
 
 export default function PaymentsPage() {
+  const { showNotice } = useAppNotice();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [batches, setBatches] = useState<string[]>([]);
@@ -183,7 +185,11 @@ export default function PaymentsPage() {
 
   const handleSearchStudent = async () => {
     if (!searchValue.trim()) {
-      alert("Please enter admission number or scan barcode");
+      showNotice({
+        title: "Student required",
+        message: "Please enter admission number or scan barcode",
+        variant: "info",
+      });
       return;
     }
 
@@ -210,7 +216,10 @@ export default function PaymentsPage() {
         notes: "",
       });
     } catch (error: any) {
-      alert(error.message || "Student not found");
+      showNotice({
+        message: error.message || "Student not found",
+        variant: "error",
+      });
       setSelectedStudent(null);
     }
   };
@@ -219,29 +228,49 @@ export default function PaymentsPage() {
     e.preventDefault();
 
     if (!paymentFormData.student_id) {
-      alert("Please search and select a student first");
+      showNotice({
+        title: "Student required",
+        message: "Please search and select a student first",
+        variant: "info",
+      });
       return;
     }
 
     if (paymentFormData.amount <= 0) {
-      alert("Amount must be greater than 0");
+      showNotice({
+        title: "Invalid amount",
+        message: "Amount must be greater than 0",
+        variant: "info",
+      });
       return;
     }
 
     if (paymentFormData.discount_amount > paymentFormData.amount) {
-      alert("Discount amount cannot exceed total amount");
+      showNotice({
+        title: "Invalid discount",
+        message: "Discount amount cannot exceed total amount",
+        variant: "info",
+      });
       return;
     }
 
     const amountAfterDiscount = paymentFormData.amount - paymentFormData.discount_amount;
 
     if (paymentFormData.paid_amount > amountAfterDiscount) {
-      alert("Paid amount cannot exceed amount after discount");
+      showNotice({
+        title: "Invalid payment",
+        message: "Paid amount cannot exceed amount after discount",
+        variant: "info",
+      });
       return;
     }
 
     if (paymentFormData.paid_amount <= 0) {
-      alert("Paid amount must be greater than 0");
+      showNotice({
+        title: "Invalid payment",
+        message: "Paid amount must be greater than 0",
+        variant: "info",
+      });
       return;
     }
 
@@ -263,7 +292,10 @@ export default function PaymentsPage() {
       setSelectedStudent(null);
       setSearchValue("");
     } catch (error: any) {
-      alert(error.message || "Failed to process payment");
+      showNotice({
+        message: error.message || "Failed to process payment",
+        variant: "error",
+      });
     }
   };
 
@@ -274,7 +306,10 @@ export default function PaymentsPage() {
       await loadData();
       setDeleteTarget(null);
     } catch (error: any) {
-      alert(error.message || "Failed to delete payment");
+      showNotice({
+        message: error.message || "Failed to delete payment",
+        variant: "error",
+      });
     }
   };
 
@@ -284,7 +319,10 @@ export default function PaymentsPage() {
       setSelectedPayment(res.payment);
       setShowViewModal(true);
     } catch (error: any) {
-      alert(error.message || "Failed to load payment details");
+      showNotice({
+        message: error.message || "Failed to load payment details",
+        variant: "error",
+      });
     }
   };
 
@@ -321,13 +359,13 @@ export default function PaymentsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-base-content">Payments</h1>
-          <p className="text-base-content/70 mt-2">Manage student payments and transactions</p>
+          <h1 className="text-3xl font-bold text-foreground">Payments</h1>
+          <p className="text-muted-foreground mt-2">Manage student payments and transactions</p>
         </div>
       </div>
 
       {/* Student Search */}
-      <div className="card bg-base-100 border border-base-300 shadow-sm">
+      <div className="card bg-card border border-border shadow-sm">
         <div className="card-body p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <IconTabs className="w-full sm:w-fit">
@@ -355,7 +393,7 @@ export default function PaymentsPage() {
                       ? "Enter admission number..."
                       : "Scan barcode or enter barcode..."
                   }
-                  className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="input input-bordered w-full border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
                   onKeyPress={(e) => {
@@ -377,10 +415,10 @@ export default function PaymentsPage() {
       </div>
 
       {/* Filters */}
-      <div className="card bg-base-100 border border-base-300 shadow-sm">
+      <div className="card bg-card border border-border shadow-sm">
         <div className="card-body p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-base-content">Filters</h3>
+            <h3 className="text-lg font-semibold text-foreground">Filters</h3>
             <button
               className="btn btn-outline btn-sm gap-2 items-center"
               onClick={handleResetFilters}
@@ -394,7 +432,7 @@ export default function PaymentsPage() {
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 flex-wrap">
             <div className="form-control flex-shrink-0 sm:w-48">
               <select
-                className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                 value={filterBatch}
                 onChange={(e) => setFilterBatch(e.target.value)}
               >
@@ -408,7 +446,7 @@ export default function PaymentsPage() {
             </div>
             <div className="form-control flex-shrink-0 sm:w-48">
               <select
-                className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                 value={filterModule}
                 onChange={(e) => setFilterModule(e.target.value)}
               >
@@ -422,7 +460,7 @@ export default function PaymentsPage() {
             </div>
             <div className="form-control flex-shrink-0 sm:w-48">
               <select
-                className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                 value={filterMonth}
                 onChange={(e) => setFilterMonth(e.target.value)}
               >
@@ -439,7 +477,7 @@ export default function PaymentsPage() {
             </div>
             <div className="form-control flex-shrink-0 sm:w-48">
               <select
-                className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                 value={filterYear}
                 onChange={(e) => setFilterYear(e.target.value)}
               >
@@ -453,7 +491,7 @@ export default function PaymentsPage() {
             </div>
             <div className="form-control flex-shrink-0 sm:w-48">
               <select
-                className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
@@ -465,7 +503,7 @@ export default function PaymentsPage() {
             </div>
             <div className="form-control flex-shrink-0 sm:w-48">
               <select
-                className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                 value={filterPaymentMethod}
                 onChange={(e) => setFilterPaymentMethod(e.target.value)}
               >
@@ -479,7 +517,7 @@ export default function PaymentsPage() {
                 <input
                   type="text"
                   placeholder="Search by student name or admission number..."
-                  className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="input input-bordered w-full border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -493,7 +531,7 @@ export default function PaymentsPage() {
       </div>
 
       {/* Payments List */}
-      <div className="card bg-base-100 border border-base-300 shadow-md">
+      <div className="card bg-card border border-border shadow-md">
         <div className="card-body p-0">
           {loading ? (
             <div className="flex justify-center py-12">
@@ -501,25 +539,25 @@ export default function PaymentsPage() {
             </div>
           ) : payments.length === 0 ? (
             <div className="text-center py-12">
-              <CreditCard className="h-16 w-16 mx-auto text-base-content/30 mb-4" />
-              <h3 className="text-xl font-semibold text-base-content mb-2">No payments found</h3>
-              <p className="text-base-content/70">No payments match your filters</p>
+              <CreditCard className="h-16 w-16 mx-auto text-foreground/30 mb-4" />
+              <h3 className="text-xl font-semibold text-foreground mb-2">No payments found</h3>
+              <p className="text-muted-foreground">No payments match your filters</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="table table-zebra w-full">
                 <thead>
-                  <tr className="bg-base-200">
-                    <th className="text-base-content font-semibold">Receipt #</th>
-                    <th className="text-base-content font-semibold">Student</th>
-                    <th className="text-base-content font-semibold">Module</th>
-                    <th className="text-base-content font-semibold">Amount</th>
-                    <th className="text-base-content font-semibold">Discount</th>
-                    <th className="text-base-content font-semibold">Paid</th>
-                    <th className="text-base-content font-semibold">Method</th>
-                    <th className="text-base-content font-semibold">Date</th>
-                    <th className="text-base-content font-semibold">Status</th>
-                    <th className="text-base-content font-semibold text-right">Actions</th>
+                  <tr className="bg-muted">
+                    <th className="text-foreground font-semibold">Receipt #</th>
+                    <th className="text-foreground font-semibold">Student</th>
+                    <th className="text-foreground font-semibold">Module</th>
+                    <th className="text-foreground font-semibold">Amount</th>
+                    <th className="text-foreground font-semibold">Discount</th>
+                    <th className="text-foreground font-semibold">Paid</th>
+                    <th className="text-foreground font-semibold">Method</th>
+                    <th className="text-foreground font-semibold">Date</th>
+                    <th className="text-foreground font-semibold">Status</th>
+                    <th className="text-foreground font-semibold text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -530,10 +568,10 @@ export default function PaymentsPage() {
                       </td>
                       <td>
                         <div>
-                          <div className="font-semibold text-base-content">
+                          <div className="font-semibold text-foreground">
                             {payment.student.full_name}
                           </div>
-                          <div className="text-sm text-base-content/70">
+                          <div className="text-sm text-muted-foreground">
                             {payment.student.admission_number} • {payment.student.admission_batch}
                           </div>
                         </div>
@@ -542,21 +580,21 @@ export default function PaymentsPage() {
                         {payment.module ? (
                           <span className="badge badge-outline badge-sm">{payment.module.name}</span>
                         ) : (
-                          <span className="text-base-content/50 text-sm">All Modules</span>
+                          <span className="text-muted-foreground text-sm">All Modules</span>
                         )}
                       </td>
                       <td>
-                        <span className="font-semibold text-base-content">
+                        <span className="font-semibold text-foreground">
                           {formatCurrency(payment.amount)}
                         </span>
                       </td>
                       <td>
                         {payment.discount_amount > 0 ? (
-                          <span className="text-error font-semibold">
+                          <span className="text-destructive font-semibold">
                             -{formatCurrency(payment.discount_amount)}
                           </span>
                         ) : (
-                          <span className="text-base-content/50">-</span>
+                          <span className="text-muted-foreground">-</span>
                         )}
                       </td>
                       <td>
@@ -570,10 +608,10 @@ export default function PaymentsPage() {
                         </span>
                       </td>
                       <td>
-                        <div className="text-sm text-base-content">
+                        <div className="text-sm text-foreground">
                           {new Date(payment.payment_date).toLocaleDateString()}
                         </div>
-                        <div className="text-xs text-base-content/70">{payment.month}</div>
+                        <div className="text-xs text-muted-foreground">{payment.month}</div>
                       </td>
                       <td>
                         <span
@@ -633,29 +671,29 @@ export default function PaymentsPage() {
       {/* Payment Modal */}
       {showPaymentModal && selectedStudent && (
         <dialog className="modal modal-open">
-          <div className="modal-box bg-base-100 border border-base-300 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold mb-4 text-base-content">Process Payment</h3>
-            <div className="card bg-base-200 border border-base-300 p-4 mb-4">
+          <div className="modal-box bg-card border border-border max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3>Process Payment</h3>
+            <div className="card bg-muted border border-border p-5 sm:p-6 mb-6">
               <div className="flex items-start gap-4">
                 {selectedStudent.image_path && (
                   <img
                     src={selectedStudent.image_path}
                     alt={selectedStudent.full_name}
-                    className="w-16 h-16 rounded-lg object-cover border border-base-300"
+                    className="w-16 h-16 rounded-lg object-cover border border-border"
                   />
                 )}
                 <div className="flex-1">
-                  <h4 className="font-semibold text-base-content text-lg">
+                  <h4 className="font-semibold text-foreground text-lg">
                     {selectedStudent.full_name}
                   </h4>
-                  <p className="text-sm text-base-content/70">
+                  <p className="text-sm text-muted-foreground">
                     {selectedStudent.admission_number} • Batch: {selectedStudent.admission_batch}
                   </p>
-                  <p className="text-sm text-base-content/70 mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     Phone: {selectedStudent.personal_phone}
                   </p>
                   <div className="mt-2">
-                    <p className="text-sm font-semibold text-base-content">Enrolled Modules:</p>
+                    <p className="text-sm font-semibold text-foreground">Enrolled Modules:</p>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {selectedStudent.modules.map((module) => (
                         <span key={module.id} className="badge badge-primary badge-sm">
@@ -665,22 +703,22 @@ export default function PaymentsPage() {
                     </div>
                   </div>
                   <div className="mt-2">
-                    <p className="text-sm text-base-content/70">
-                      Monthly Fee: <span className="font-semibold text-base-content">{formatCurrency(selectedStudent.monthly_fee)}</span>
+                    <p className="text-sm text-muted-foreground">
+                      Monthly Fee: <span className="font-semibold text-foreground">{formatCurrency(selectedStudent.monthly_fee)}</span>
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <form onSubmit={handleSubmitPayment} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmitPayment} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Module (Optional)</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Module (Optional)</span>
                   </label>
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={paymentFormData.module_id}
                     onChange={(e) => setPaymentFormData({ ...paymentFormData, module_id: e.target.value })}
                   >
@@ -693,35 +731,35 @@ export default function PaymentsPage() {
                   </select>
                 </div>
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Payment Date *</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Payment Date *</span>
                   </label>
                   <input
                     type="date"
-                    className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={paymentFormData.payment_date}
                     onChange={(e) => setPaymentFormData({ ...paymentFormData, payment_date: e.target.value })}
                     required
                   />
                 </div>
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Month *</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Month *</span>
                   </label>
                   <input
                     type="month"
-                    className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={paymentFormData.month}
                     onChange={(e) => setPaymentFormData({ ...paymentFormData, month: e.target.value })}
                     required
                   />
                 </div>
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Payment Method *</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Payment Method *</span>
                   </label>
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={paymentFormData.payment_method}
                     onChange={(e) =>
                       setPaymentFormData({
@@ -736,14 +774,14 @@ export default function PaymentsPage() {
                   </select>
                 </div>
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Amount (Rs.) *</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Amount (Rs.) *</span>
                   </label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
-                    className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={paymentFormData.amount}
                     onChange={(e) => {
                       const amount = parseFloat(e.target.value) || 0;
@@ -757,14 +795,14 @@ export default function PaymentsPage() {
                   />
                 </div>
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Discount (Rs.)</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Discount (Rs.)</span>
                   </label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
-                    className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={paymentFormData.discount_amount}
                     onChange={(e) => {
                       const discount = parseFloat(e.target.value) || 0;
@@ -779,15 +817,15 @@ export default function PaymentsPage() {
                   />
                 </div>
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Paid Amount (Rs.) *</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Paid Amount (Rs.) *</span>
                   </label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     max={amountAfterDiscount}
-                    className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={paymentFormData.paid_amount}
                     onChange={(e) => {
                       const paid = parseFloat(e.target.value) || 0;
@@ -800,18 +838,18 @@ export default function PaymentsPage() {
                     required
                   />
                   <label className="label pt-1">
-                    <span className="label-text-alt text-base-content/70">
+                    <span className="label-text-alt text-muted-foreground">
                       After discount: {formatCurrency(amountAfterDiscount)}
                     </span>
                   </label>
                 </div>
               </div>
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">Notes</span>
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">Notes</span>
                 </label>
                 <textarea
-                  className="textarea textarea-bordered w-full border-base-300 focus:border-primary focus:outline-none min-h-[80px]"
+                  className="textarea textarea-bordered w-full border-border focus:border-primary focus:outline-none min-h-[80px]"
                   placeholder="Optional notes..."
                   value={paymentFormData.notes}
                   onChange={(e) =>
@@ -820,7 +858,7 @@ export default function PaymentsPage() {
                 />
               </div>
 
-              <div className="modal-action flex justify-end gap-3 mt-6">
+              <div className="modal-action">
                 <button
                   type="button"
                   className="btn btn-ghost gap-2 px-6"
@@ -889,15 +927,15 @@ export default function PaymentsPage() {
             <RecordDetailSectionTitle>Student & module</RecordDetailSectionTitle>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-4">
               <div>
-                <p className="text-xs text-base-content/60">Student</p>
-                <p className="text-sm font-medium text-base-content">{selectedPayment.student.full_name}</p>
-                <p className="text-xs text-base-content/55">
+                <p className="text-xs text-muted-foreground">Student</p>
+                <p className="text-sm font-medium text-foreground">{selectedPayment.student.full_name}</p>
+                <p className="text-xs text-foreground/55">
                   {selectedPayment.student.admission_number} · {selectedPayment.student.admission_batch}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-base-content/60">Module</p>
-                <p className="text-sm font-medium text-base-content">
+                <p className="text-xs text-muted-foreground">Module</p>
+                <p className="text-sm font-medium text-foreground">
                   {selectedPayment.module?.name || "All modules"}
                 </p>
               </div>
@@ -906,24 +944,24 @@ export default function PaymentsPage() {
             <RecordDetailSectionTitle>Amounts</RecordDetailSectionTitle>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-3">
               <div>
-                <p className="text-xs text-base-content/60">Amount</p>
-                <p className="text-sm font-medium text-base-content">{formatCurrency(selectedPayment.amount)}</p>
+                <p className="text-xs text-muted-foreground">Amount</p>
+                <p className="text-sm font-medium text-foreground">{formatCurrency(selectedPayment.amount)}</p>
               </div>
               <div>
-                <p className="text-xs text-base-content/60">Discount</p>
-                <p className="text-sm font-medium text-error">{formatCurrency(selectedPayment.discount_amount)}</p>
+                <p className="text-xs text-muted-foreground">Discount</p>
+                <p className="text-sm font-medium text-destructive">{formatCurrency(selectedPayment.discount_amount)}</p>
               </div>
               <div>
-                <p className="text-xs text-base-content/60">Paid</p>
+                <p className="text-xs text-muted-foreground">Paid</p>
                 <p className="text-sm font-medium text-success">{formatCurrency(selectedPayment.paid_amount)}</p>
               </div>
               <div>
-                <p className="text-xs text-base-content/60">Period</p>
-                <p className="text-sm font-medium text-base-content">{selectedPayment.month}</p>
+                <p className="text-xs text-muted-foreground">Period</p>
+                <p className="text-sm font-medium text-foreground">{selectedPayment.month}</p>
               </div>
               <div className="sm:col-span-2">
-                <p className="text-xs text-base-content/60">Payment date</p>
-                <p className="text-sm font-medium text-base-content">
+                <p className="text-xs text-muted-foreground">Payment date</p>
+                <p className="text-sm font-medium text-foreground">
                   {new Date(selectedPayment.payment_date).toLocaleDateString()}
                 </p>
               </div>
@@ -932,14 +970,14 @@ export default function PaymentsPage() {
             {selectedPayment.notes ? (
               <div>
                 <RecordDetailSectionTitle>Notes</RecordDetailSectionTitle>
-                <p className="text-sm text-base-content leading-snug">{selectedPayment.notes}</p>
+                <p className="text-sm text-foreground leading-snug">{selectedPayment.notes}</p>
               </div>
             ) : null}
 
             {selectedPayment.created_by ? (
               <div>
-                <p className="text-xs text-base-content/60">Processed by</p>
-                <p className="text-sm font-medium text-base-content">{selectedPayment.created_by.name}</p>
+                <p className="text-xs text-muted-foreground">Processed by</p>
+                <p className="text-sm font-medium text-foreground">{selectedPayment.created_by.name}</p>
               </div>
             ) : null}
           </div>
@@ -952,7 +990,7 @@ export default function PaymentsPage() {
         description={
           <>
             Receipt{" "}
-            <span className="font-medium text-base-content">
+            <span className="font-medium text-foreground">
               {deleteTarget?.receipt_number || (deleteTarget ? `#${deleteTarget.id}` : "")}
             </span>
             . This cannot be undone.

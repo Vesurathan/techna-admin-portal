@@ -24,6 +24,7 @@ import { RecordDetailModal, RecordDetailSectionTitle } from "@/app/components/Re
 import { Module } from "@/app/types/module";
 import { Staff } from "@/app/types/module";
 import { Classroom } from "@/app/types/classroom";
+import { useAppNotice } from "@/app/contexts/AppNoticeContext";
 
 type ModalMode = "create" | "edit" | "view" | null;
 
@@ -35,6 +36,7 @@ const normalizeTime = (time: string | null | undefined): string => {
 };
 
 export default function TimetablesPage() {
+  const { showNotice } = useAppNotice();
   const [timetables, setTimetables] = useState<Timetable[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [staffs, setStaffs] = useState<Staff[]>([]);
@@ -263,18 +265,30 @@ export default function TimetablesPage() {
     e.preventDefault();
 
     if (formData.slots.length === 0) {
-      alert("Please add at least one time slot");
+      showNotice({
+        title: "Time slots required",
+        message: "Please add at least one time slot",
+        variant: "info",
+      });
       return;
     }
 
     // Validate all slots
     for (const slot of formData.slots) {
       if (!slot.start_time || !slot.end_time || !slot.module_id || !slot.staff_id || (!slot.classroom && !slot.classroom_id)) {
-        alert("Please fill in all required fields for all slots");
+        showNotice({
+          title: "Incomplete slots",
+          message: "Please fill in all required fields for all slots",
+          variant: "info",
+        });
         return;
       }
       if (slot.start_time >= slot.end_time) {
-        alert("End time must be after start time");
+        showNotice({
+          title: "Invalid time",
+          message: "End time must be after start time",
+          variant: "info",
+        });
         return;
       }
     }
@@ -303,7 +317,10 @@ export default function TimetablesPage() {
       await loadData();
       closeModal();
     } catch (error: any) {
-      alert(error.message || "Failed to save timetable");
+      showNotice({
+        message: error.message || "Failed to save timetable",
+        variant: "error",
+      });
     }
   };
 
@@ -314,7 +331,10 @@ export default function TimetablesPage() {
       await loadData();
       setDeleteTarget(null);
     } catch (error: any) {
-      alert(error.message || "Failed to delete timetable");
+      showNotice({
+        message: error.message || "Failed to delete timetable",
+        variant: "error",
+      });
     }
   };
 
@@ -463,7 +483,10 @@ export default function TimetablesPage() {
       // Convert canvas to blob and download
       canvas.toBlob((blob) => {
         if (!blob) {
-          alert('Failed to generate image');
+          showNotice({
+            message: "Failed to generate image",
+            variant: "error",
+          });
           return;
         }
 
@@ -478,7 +501,10 @@ export default function TimetablesPage() {
       }, 'image/png');
     } catch (error: any) {
       console.error('Download error:', error);
-      alert(error.message || 'Failed to download timetable');
+      showNotice({
+        message: error.message || "Failed to download timetable",
+        variant: "error",
+      });
     }
   };
 
@@ -493,8 +519,8 @@ export default function TimetablesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-base-content">Timetables</h1>
-          <p className="text-base-content/70 mt-2">
+          <h1 className="text-3xl font-bold text-foreground">Timetables</h1>
+          <p className="text-muted-foreground mt-2">
             Manage class schedules, time slots, and assignments
           </p>
         </div>
@@ -508,7 +534,7 @@ export default function TimetablesPage() {
       </div>
 
       {/* Search and Filter */}
-      <div className="card bg-base-100 border border-base-300 shadow-sm">
+      <div className="card bg-card border border-border shadow-sm">
         <div className="card-body p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="form-control flex-1 min-w-0">
@@ -516,7 +542,7 @@ export default function TimetablesPage() {
                 <input
                   type="text"
                   placeholder="Search by batch or weekday..."
-                  className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="input input-bordered w-full border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -527,7 +553,7 @@ export default function TimetablesPage() {
             </div>
             <div className="form-control flex-shrink-0 sm:w-48">
               <select
-                className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                 value={filterBatch}
                 onChange={(e) => setFilterBatch(e.target.value)}
               >
@@ -542,7 +568,7 @@ export default function TimetablesPage() {
             <div className="form-control flex-shrink-0 sm:w-48">
               <input
                 type="date"
-                className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
                 placeholder="Filter by date"
@@ -553,7 +579,7 @@ export default function TimetablesPage() {
       </div>
 
       {/* Timetables List */}
-      <div className="card bg-base-100 border border-base-300 shadow-md">
+      <div className="card bg-card border border-border shadow-md">
         <div className="card-body p-0">
           {loading ? (
             <div className="flex justify-center py-12">
@@ -561,11 +587,11 @@ export default function TimetablesPage() {
             </div>
           ) : filteredTimetables.length === 0 ? (
             <div className="text-center py-12">
-              <Calendar className="h-16 w-16 mx-auto text-base-content/30 mb-4" />
-              <h3 className="text-xl font-semibold text-base-content mb-2">
+              <Calendar className="h-16 w-16 mx-auto text-foreground/30 mb-4" />
+              <h3 className="text-xl font-semibold text-foreground mb-2">
                 No timetables found
               </h3>
-              <p className="text-base-content/70 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Create your first timetable to get started
               </p>
               <button className="btn btn-primary gap-2 items-center px-6" onClick={openCreate}>
@@ -577,21 +603,21 @@ export default function TimetablesPage() {
           <div className="overflow-x-auto">
               <table className="table table-zebra w-full">
               <thead>
-                <tr className="bg-base-200">
-                    <th className="text-base-content font-semibold whitespace-nowrap">Batch</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap">Date</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap">Weekday</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap">Time Slots</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap text-right">Actions</th>
+                <tr className="bg-muted">
+                    <th className="text-foreground font-semibold whitespace-nowrap">Batch</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">Date</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">Weekday</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">Time Slots</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                   {filteredTimetables.map((timetable) => (
                     <tr key={timetable.id} className="hover">
                       <td>
-                        <div className="font-semibold text-base-content">{timetable.batch}</div>
+                        <div className="font-semibold text-foreground">{timetable.batch}</div>
                       </td>
-                      <td className="text-base-content whitespace-nowrap">
+                      <td className="text-foreground whitespace-nowrap">
                         {new Date(timetable.date).toLocaleDateString()}
                       </td>
                       <td>
@@ -677,19 +703,18 @@ export default function TimetablesPage() {
       {/* Create/Edit Modal */}
       {modalMode && modalMode !== "view" && (
         <dialog className="modal modal-open">
-          <div className="modal-box bg-base-100 border border-base-300 max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold mb-4 text-base-content">
-              {modalMode === "edit" ? "Edit Timetable" : "Create New Timetable"}
-            </h3>
+          <div className="modal-box bg-card border border-border max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3>{modalMode === "edit" ? "Edit Timetable" : "Create New Timetable"}</h3>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="admin-form-section">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Batch *</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Batch *</span>
                   </label>
                   <input
                     type="text"
-                    className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                     placeholder="e.g., 2026"
                     value={formData.batch}
                     onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
@@ -698,12 +723,12 @@ export default function TimetablesPage() {
                 </div>
 
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Date *</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Date *</span>
                   </label>
                   <input
                     type="date"
-                    className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={formData.date}
                     onChange={(e) => {
                       setFormData({ ...formData, date: e.target.value });
@@ -719,12 +744,14 @@ export default function TimetablesPage() {
                   )}
                 </div>
               </div>
+              </div>
 
               {/* Time Slots */}
+              <div className="admin-form-section">
               <div className="form-control">
                 <div className="flex items-center justify-between mb-4">
                   <label className="label pb-0">
-                    <span className="label-text font-semibold text-base-content">Time Slots *</span>
+                    <span className="label-text font-semibold text-foreground">Time Slots *</span>
                   </label>
                   <button
                     type="button"
@@ -745,10 +772,10 @@ export default function TimetablesPage() {
                     {formData.slots.map((slot, index) => (
                       <div
                         key={index}
-                        className="card bg-base-200 border border-base-300 p-4"
+                        className="card bg-muted border border-border p-5 sm:p-6"
                       >
                         <div className="flex items-start justify-between mb-3">
-                          <h4 className="font-semibold text-base-content">Slot {index + 1}</h4>
+                          <h4 className="font-semibold text-foreground">Slot {index + 1}</h4>
                           <button
                             type="button"
                             className="btn btn-ghost btn-sm btn-circle"
@@ -757,16 +784,16 @@ export default function TimetablesPage() {
                             <X className="h-4 w-4" />
                           </button>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-5">
                           <div className="form-control">
-                            <label className="label pb-2">
-                              <span className="label-text text-sm font-medium text-base-content">
+                            <label className="label">
+                              <span className="label-text text-sm font-medium text-foreground">
                                 Start Time *
                               </span>
                             </label>
                             <input
                               type="time"
-                              className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                              className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                               value={slot.start_time}
                               onChange={(e) => updateSlot(index, "start_time", e.target.value)}
                               required
@@ -774,14 +801,14 @@ export default function TimetablesPage() {
                           </div>
 
                           <div className="form-control">
-                            <label className="label pb-2">
-                              <span className="label-text text-sm font-medium text-base-content">
+                            <label className="label">
+                              <span className="label-text text-sm font-medium text-foreground">
                                 End Time *
                               </span>
                             </label>
                             <input
                               type="time"
-                              className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                              className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                               value={slot.end_time}
                               onChange={(e) => updateSlot(index, "end_time", e.target.value)}
                               required
@@ -789,14 +816,14 @@ export default function TimetablesPage() {
                           </div>
 
                           <div className="form-control">
-                            <label className="label pb-2">
-                              <span className="label-text text-sm font-medium text-base-content">
+                            <label className="label">
+                              <span className="label-text text-sm font-medium text-foreground">
                                 Interval (minutes)
                               </span>
                             </label>
                             <input
                               type="number"
-                              className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                              className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                               placeholder="Optional"
                               min={0}
                               value={slot.interval_time || ""}
@@ -811,13 +838,13 @@ export default function TimetablesPage() {
                           </div>
 
                           <div className="form-control">
-                            <label className="label pb-2">
-                              <span className="label-text text-sm font-medium text-base-content">
+                            <label className="label">
+                              <span className="label-text text-sm font-medium text-foreground">
                                 Module *
                               </span>
                             </label>
                             <select
-                              className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                              className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                               value={slot.module_id}
                               onChange={(e) => updateSlot(index, "module_id", e.target.value)}
                               required
@@ -832,13 +859,13 @@ export default function TimetablesPage() {
                           </div>
 
                           <div className="form-control">
-                            <label className="label pb-2">
-                              <span className="label-text text-sm font-medium text-base-content">
+                            <label className="label">
+                              <span className="label-text text-sm font-medium text-foreground">
                                 Staff *
                               </span>
                             </label>
                             <select
-                              className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                              className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                               value={slot.staff_id}
                               onChange={(e) => updateSlot(index, "staff_id", e.target.value)}
                               required
@@ -853,14 +880,14 @@ export default function TimetablesPage() {
                           </div>
 
                           <div className="form-control">
-                            <label className="label pb-2">
-                              <span className="label-text text-sm font-medium text-base-content">
+                            <label className="label">
+                              <span className="label-text text-sm font-medium text-foreground">
                                 Classroom/Hall *
                               </span>
                             </label>
                             {classrooms.length > 0 ? (
                               <select
-                                className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                                className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                                 value={slot.classroom_id || ""}
                                 onChange={(e) => {
                                   const selectedClassroomId = e.target.value;
@@ -888,7 +915,7 @@ export default function TimetablesPage() {
                             ) : (
                               <input
                                 type="text"
-                                className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                                className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                                 placeholder="e.g., Hall A, Room 101"
                                 value={slot.classroom}
                                 onChange={(e) => updateSlot(index, "classroom", e.target.value)}
@@ -902,8 +929,9 @@ export default function TimetablesPage() {
                   </div>
                 )}
               </div>
+              </div>
 
-              <div className="modal-action flex justify-end gap-3 mt-8">
+              <div className="modal-action">
                 <button
                   type="button"
                   className="btn btn-ghost gap-2 px-6"
@@ -967,22 +995,22 @@ export default function TimetablesPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div>
-                <p className="text-xs text-base-content/60">Batch</p>
-                <p className="text-sm font-medium text-base-content">{selectedTimetable.batch}</p>
+                <p className="text-xs text-muted-foreground">Batch</p>
+                <p className="text-sm font-medium text-foreground">{selectedTimetable.batch}</p>
               </div>
               <div>
-                <p className="text-xs text-base-content/60">Date</p>
-                <p className="text-sm font-medium text-base-content">
+                <p className="text-xs text-muted-foreground">Date</p>
+                <p className="text-sm font-medium text-foreground">
                   {new Date(selectedTimetable.date).toLocaleDateString()}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-base-content/60">Weekday</p>
-                <p className="text-sm font-medium text-base-content">{selectedTimetable.weekday}</p>
+                <p className="text-xs text-muted-foreground">Weekday</p>
+                <p className="text-sm font-medium text-foreground">{selectedTimetable.weekday}</p>
               </div>
               <div>
-                <p className="text-xs text-base-content/60">Slots</p>
-                <p className="text-sm font-medium text-base-content">{selectedTimetable.slots.length}</p>
+                <p className="text-xs text-muted-foreground">Slots</p>
+                <p className="text-sm font-medium text-foreground">{selectedTimetable.slots.length}</p>
               </div>
             </div>
 
@@ -994,18 +1022,18 @@ export default function TimetablesPage() {
                 .map((slot, index) => (
                   <div
                     key={index}
-                    className="rounded-lg border border-base-300 bg-base-200/60 px-3 py-2.5 text-sm"
+                    className="rounded-lg border border-border bg-muted/60 px-3 py-2.5 text-sm"
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <Clock className="h-3.5 w-3.5 shrink-0 text-primary" />
-                      <span className="font-medium text-base-content">
+                      <span className="font-medium text-foreground">
                         {slot.start_time} – {slot.end_time}
                       </span>
                       {slot.interval_time ? (
                         <span className="badge badge-ghost badge-xs">+{slot.interval_time}m</span>
                       ) : null}
                     </div>
-                    <div className="mt-2 grid gap-1.5 text-xs text-base-content/80 sm:grid-cols-2">
+                    <div className="mt-2 grid gap-1.5 text-xs text-foreground/80 sm:grid-cols-2">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <BookOpen className="h-3.5 w-3.5 shrink-0 text-primary" />
                         <span className="truncate">{slot.module?.name || "Unknown module"}</span>
@@ -1031,9 +1059,9 @@ export default function TimetablesPage() {
         title="Delete timetable?"
         description={
           <>
-            Batch <span className="font-medium text-base-content">{deleteTarget?.batch}</span>
+            Batch <span className="font-medium text-foreground">{deleteTarget?.batch}</span>
             {" · "}
-            <span className="font-medium text-base-content">
+            <span className="font-medium text-foreground">
               {deleteTarget ? new Date(deleteTarget.date).toLocaleDateString() : ""}
             </span>
             . This cannot be undone.

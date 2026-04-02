@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import { useSidebar } from "@/app/contexts/SidebarContext";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { Permission } from "@/app/types/role";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
   Home,
@@ -19,6 +22,9 @@ import {
   Menu,
   X,
   ClipboardCheck,
+  HardDrive,
+  Wallet,
+  Images,
 } from "lucide-react";
 
 interface NavItem {
@@ -37,7 +43,15 @@ const navItems: NavItem[] = [
   { label: "Time Tables", href: "/admin/timetables", icon: Calendar, permission: "timetables" },
   { label: "Question Bank", href: "/admin/questionbank", icon: FileQuestion, permission: "questionbank" },
   { label: "Payments", href: "/admin/payments", icon: CreditCard, permission: "payments" },
+  {
+    label: "Salary & Payroll",
+    href: "/admin/salary-payroll",
+    icon: Wallet,
+    permission: "salary_payroll",
+  },
   { label: "Reports", href: "/admin/reports", icon: FileText, permission: "reports" },
+  { label: "Drive", href: "/admin/drive", icon: HardDrive, permission: "photo_library" },
+  { label: "Gallery", href: "/admin/gallery", icon: Images, permission: "photo_library" },
   { label: "Role", href: "/admin/role", icon: Shield, permission: "role" },
 ];
 
@@ -59,58 +73,59 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-40 h-screen bg-base-100 transition-all duration-300 ease-in-out ${
+      className={cn(
+        "fixed left-0 top-0 z-40 h-screen border-r border-border bg-card shadow-sm transition-all duration-300 ease-in-out",
         isExpanded ? "w-64" : "w-20"
-      } border-r border-base-300/70 shadow-sm`}
+      )}
     >
       <div className="flex h-full flex-col">
-        {/* Header */}
-        <div className={`flex h-16 items-center border-b border-base-300/70 bg-base-100 ${
-          isExpanded ? "justify-between px-4" : "justify-center px-2"
-        }`}>
-          {isExpanded && (
-            <h1 className="text-xl font-bold text-primary whitespace-nowrap">
-              Techna Admin
-            </h1>
+        <div
+          className={cn(
+            "flex h-16 shrink-0 items-center border-b border-border bg-card",
+            isExpanded ? "justify-between px-4" : "justify-center px-2"
           )}
-          <button
+        >
+          {isExpanded && (
+            <h1 className="whitespace-nowrap text-xl font-bold text-primary">Techna Admin</h1>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
             onClick={toggleSidebar}
-            className="btn btn-ghost btn-sm btn-circle hover:bg-base-300 flex-shrink-0"
+            className="shrink-0"
             aria-label="Toggle sidebar"
           >
-            {isExpanded ? (
-              <X className="h-5 w-5 text-base-content" />
-            ) : (
-              <Menu className="h-5 w-5 text-base-content" />
-            )}
-          </button>
+            {isExpanded ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-3 sm:p-4">
-          <ul className="space-y-2">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4">
+          <ul className="space-y-1.5">
             {homeNav.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
-                <li key={item.key}>
+                <motion.li
+                  key={item.key}
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                >
                   <Link
                     href={item.href}
-                    className={`flex items-center gap-3 rounded-lg transition-all duration-200 ${
-                      isActive
-                        ? "bg-primary text-primary-content shadow-md"
-                        : "text-base-content hover:bg-base-300"
-                    } ${isExpanded ? "px-4 py-3" : "px-3 py-3 justify-center"}`}
                     title={!isExpanded ? item.label : undefined}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg transition-colors",
+                      isExpanded ? "px-4 py-3" : "justify-center px-3 py-3",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
                   >
-                    <Icon
-                      className={`h-5 w-5 flex-shrink-0 ${
-                        isActive ? "text-primary-content" : "text-base-content/70"
-                      }`}
-                    />
-                    {isExpanded && <span className="font-medium whitespace-nowrap">{item.label}</span>}
+                    <Icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary-foreground")} />
+                    {isExpanded && <span className="whitespace-nowrap font-medium">{item.label}</span>}
                   </Link>
-                </li>
+                </motion.li>
               );
             })}
             {filteredNavItems.map((item) => {
@@ -120,28 +135,26 @@ export default function Sidebar() {
                 (item.href !== "/admin" && pathname.startsWith(item.href));
 
               return (
-                <li key={item.href}>
+                <motion.li
+                  key={item.href}
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                >
                   <Link
                     href={item.href}
-                    className={`flex items-center gap-3 rounded-lg transition-all duration-200 ${
-                      isActive
-                        ? "bg-primary text-primary-content shadow-md"
-                        : "text-base-content hover:bg-base-300"
-                    } ${
-                      isExpanded ? "px-4 py-3" : "px-3 py-3 justify-center"
-                    }`}
                     title={!isExpanded ? item.label : undefined}
-                  >
-                    <Icon
-                      className={`h-5 w-5 flex-shrink-0 ${
-                        isActive ? "text-primary-content" : "text-base-content/70"
-                      }`}
-                    />
-                    {isExpanded && (
-                      <span className="font-medium whitespace-nowrap">{item.label}</span>
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg transition-colors",
+                      isExpanded ? "px-4 py-3" : "justify-center px-3 py-3",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
+                  >
+                    <Icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary-foreground")} />
+                    {isExpanded && <span className="whitespace-nowrap font-medium">{item.label}</span>}
                   </Link>
-                </li>
+                </motion.li>
               );
             })}
           </ul>

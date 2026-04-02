@@ -1,6 +1,8 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface PaginationProps {
   currentPage: number;
@@ -10,7 +12,7 @@ interface PaginationProps {
   to: number;
   loading?: boolean;
   onPageChange: (page: number) => void;
-  itemName?: string; // e.g., "timetables", "modules", "students"
+  itemName?: string;
 }
 
 export default function Pagination({
@@ -25,50 +27,39 @@ export default function Pagination({
 }: PaginationProps) {
   if (lastPage <= 1) return null;
 
-  // Generate page numbers to display
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
-    const maxVisible = 5; // Maximum visible page numbers
+    const maxVisible = 5;
 
     if (lastPage <= maxVisible) {
-      // Show all pages if total pages is less than max visible
       for (let i = 1; i <= lastPage; i++) {
         pages.push(i);
       }
     } else {
-      // Always show first page
       pages.push(1);
-
-      // Calculate start and end of visible range
       let start = Math.max(2, currentPage - 1);
       let end = Math.min(lastPage - 1, currentPage + 1);
 
-      // Adjust if we're near the start
       if (currentPage <= 3) {
         end = Math.min(4, lastPage - 1);
       }
 
-      // Adjust if we're near the end
       if (currentPage >= lastPage - 2) {
         start = Math.max(2, lastPage - 3);
       }
 
-      // Add ellipsis before if needed
       if (start > 2) {
         pages.push("ellipsis-start");
       }
 
-      // Add visible page numbers
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
 
-      // Add ellipsis after if needed
       if (end < lastPage - 1) {
         pages.push("ellipsis-end");
       }
 
-      // Always show last page
       if (lastPage > 1) {
         pages.push(lastPage);
       }
@@ -80,20 +71,18 @@ export default function Pagination({
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="card-body border-t border-base-300 p-4 sm:p-5">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Results Info */}
-        <div className="text-sm text-base-content/70 whitespace-nowrap">
-          Showing <span className="font-semibold text-base-content">{from}</span> to{" "}
-          <span className="font-semibold text-base-content">{to}</span> of{" "}
-          <span className="font-semibold text-base-content">{total}</span> {itemName}
+    <div className="border-t border-border px-4 py-4 sm:px-5 sm:py-5">
+      <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+        <div className="whitespace-nowrap text-sm text-muted-foreground">
+          Showing <span className="font-semibold text-foreground">{from}</span> to{" "}
+          <span className="font-semibold text-foreground">{to}</span> of{" "}
+          <span className="font-semibold text-foreground">{total}</span> {itemName}
         </div>
 
-        {/* Pagination Controls */}
         <div className="flex items-center gap-2">
-          {/* First Page Button */}
-          <button
-            className="btn btn-sm btn-outline border-base-300 hover:border-primary hover:bg-primary hover:text-primary-content disabled:opacity-50 disabled:cursor-not-allowed"
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => onPageChange(1)}
             disabled={currentPage === 1 || loading}
             title="First page"
@@ -101,11 +90,11 @@ export default function Pagination({
           >
             <ChevronsLeft className="h-4 w-4" />
             <span className="hidden sm:inline">First</span>
-          </button>
+          </Button>
 
-          {/* Previous Page Button */}
-          <button
-            className="btn btn-sm btn-outline border-base-300 hover:border-primary hover:bg-primary hover:text-primary-content disabled:opacity-50 disabled:cursor-not-allowed"
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1 || loading}
             title="Previous page"
@@ -113,17 +102,13 @@ export default function Pagination({
           >
             <ChevronLeft className="h-4 w-4" />
             <span className="hidden sm:inline">Prev</span>
-          </button>
+          </Button>
 
-          {/* Page Numbers */}
           <div className="flex items-center gap-1">
             {pageNumbers.map((page, index) => {
               if (page === "ellipsis-start" || page === "ellipsis-end") {
                 return (
-                  <span
-                    key={`ellipsis-${index}`}
-                    className="px-2 text-base-content/50 font-semibold"
-                  >
+                  <span key={`ellipsis-${index}`} className="px-2 font-semibold text-muted-foreground">
                     ...
                   </span>
                 );
@@ -133,27 +118,25 @@ export default function Pagination({
               const isActive = currentPage === pageNum;
 
               return (
-                <button
+                <Button
                   key={pageNum}
-                  className={`btn btn-sm min-w-[2.5rem] ${
-                    isActive
-                      ? "btn-primary text-primary-content"
-                      : "btn-outline border-base-300 hover:border-primary hover:bg-primary hover:text-primary-content"
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  variant={isActive ? "default" : "outline"}
+                  size="sm"
+                  className={cn("min-w-[2.5rem]", isActive && "pointer-events-none")}
                   onClick={() => onPageChange(pageNum)}
                   disabled={loading}
                   aria-label={`Page ${pageNum}`}
                   aria-current={isActive ? "page" : undefined}
                 >
                   {pageNum}
-                </button>
+                </Button>
               );
             })}
           </div>
 
-          {/* Next Page Button */}
-          <button
-            className="btn btn-sm btn-outline border-base-300 hover:border-primary hover:bg-primary hover:text-primary-content disabled:opacity-50 disabled:cursor-not-allowed"
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === lastPage || loading}
             title="Next page"
@@ -161,11 +144,11 @@ export default function Pagination({
           >
             <span className="hidden sm:inline">Next</span>
             <ChevronRight className="h-4 w-4" />
-          </button>
+          </Button>
 
-          {/* Last Page Button */}
-          <button
-            className="btn btn-sm btn-outline border-base-300 hover:border-primary hover:bg-primary hover:text-primary-content disabled:opacity-50 disabled:cursor-not-allowed"
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => onPageChange(lastPage)}
             disabled={currentPage === lastPage || loading}
             title="Last page"
@@ -173,7 +156,7 @@ export default function Pagination({
           >
             <span className="hidden sm:inline">Last</span>
             <ChevronsRight className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

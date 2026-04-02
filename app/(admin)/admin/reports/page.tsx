@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback, useMemo } from "react";
 import {
   FileText,
   Download,
@@ -14,14 +14,19 @@ import {
   RotateCcw,
   BarChart3,
 } from "lucide-react";
-import { reportsApi, modulesApi, paymentsApi } from "@/app/lib/api";
+import { reportsApi, modulesApi, paymentsApi, type ReportPagination } from "@/app/lib/api";
 import { Module } from "@/app/types/module";
 import { formatCurrency } from "@/app/utils/currency";
 import { IconTab, IconTabs } from "@/app/components/IconTabs";
+import Pagination from "@/app/components/Pagination";
+import { useAppNotice } from "@/app/contexts/AppNoticeContext";
+
+const REPORTS_PER_PAGE = 10;
 
 type ReportType = "attendance" | "financial" | "enrollment" | "performance";
 
 export default function ReportsPage() {
+  const { showNotice } = useAppNotice();
   const [activeReport, setActiveReport] = useState<ReportType>("attendance");
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any>(null);
@@ -40,6 +45,9 @@ export default function ReportsPage() {
   const [filterModule, setFilterModule] = useState("");
   const [modules, setModules] = useState<Module[]>([]);
   const [batches, setBatches] = useState<string[]>([]);
+  const [reportPage, setReportPage] = useState(1);
+  const [reportPagination, setReportPagination] = useState<ReportPagination | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   // Generate month options (last 12 months)
   const monthOptions: string[] = [];
@@ -60,6 +68,36 @@ export default function ReportsPage() {
     loadModules();
     loadBatches();
   }, []);
+
+  const reportFilterKey = useMemo(
+    () =>
+      [
+        activeReport,
+        filterDateFrom,
+        filterDateTo,
+        filterMonth,
+        filterYear,
+        filterType,
+        filterStatus,
+        filterBatch,
+        filterModule,
+      ].join("|"),
+    [
+      activeReport,
+      filterDateFrom,
+      filterDateTo,
+      filterMonth,
+      filterYear,
+      filterType,
+      filterStatus,
+      filterBatch,
+      filterModule,
+    ]
+  );
+
+  useLayoutEffect(() => {
+    setReportPage(1);
+  }, [reportFilterKey]);
 
   const loadModules = async () => {
     try {
@@ -89,102 +127,146 @@ export default function ReportsPage() {
 
   const loadReport = useCallback(async () => {
     setLoading(true);
+    setReportPagination(null);
     try {
       let data: any;
 
-      const commonParams: any = {};
+      const commonParams: Record<string, string | number> = {
+        page: reportPage,
+        per_page: REPORTS_PER_PAGE,
+      };
       if (filterDateFrom) commonParams.date_from = filterDateFrom;
       if (filterDateTo) commonParams.date_to = filterDateTo;
       if (filterMonth) commonParams.month = filterMonth;
-      if (filterYear) commonParams.year = parseInt(filterYear);
+      if (filterYear) {
+        const y = parseInt(filterYear, 10);
+        if (!Number.isNaN(y)) commonParams.year = y;
+      }
 
       switch (activeReport) {
-        case "attendance":
+        case "attendance": {
           const attendanceParams = { ...commonParams };
           if (filterType) attendanceParams.type = filterType;
           if (filterStatus) attendanceParams.status = filterStatus;
           data = await reportsApi.getAttendanceReport(attendanceParams);
           break;
+        }
 
-        case "financial":
+        case "financial": {
           const financialParams = { ...commonParams };
           if (filterBatch) financialParams.batch = filterBatch;
           if (filterModule) financialParams.module_id = filterModule;
           data = await reportsApi.getFinancialReport(financialParams);
           break;
+        }
 
-        case "enrollment":
+        case "enrollment": {
           const enrollmentParams = { ...commonParams };
           if (filterBatch) enrollmentParams.batch = filterBatch;
           if (filterStatus) enrollmentParams.status = filterStatus;
           data = await reportsApi.getEnrollmentReport(enrollmentParams);
           break;
+        }
 
-        case "performance":
+        case "performance": {
           const performanceParams = { ...commonParams };
           if (filterBatch) performanceParams.batch = filterBatch;
           if (filterModule) performanceParams.module_id = filterModule;
           data = await reportsApi.getPerformanceReport(performanceParams);
           break;
+        }
       }
 
       setReportData(data);
       setSummary(data.summary || {});
+      setReportPagination(data.pagination ?? null);
     } catch (error) {
       console.error("Failed to load report:", error);
-      alert("Failed to load report data");
+      showNotice({
+        message: "Failed to load report data",
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }
-  }, [activeReport, filterDateFrom, filterDateTo, filterMonth, filterYear, filterType, filterStatus, filterBatch, filterModule]);
+  }, [
+    activeReport,
+    filterDateFrom,
+    filterDateTo,
+    filterMonth,
+    filterYear,
+    filterType,
+    filterStatus,
+    filterBatch,
+    filterModule,
+    reportPage,
+  ]);
 
   useEffect(() => {
     loadReport();
   }, [loadReport]);
 
+  const handleReportPageChange = (page: number) => {
+    setReportPage(page);
+  };
+
+  const buildExportCommonParams = () => {
+    const common: Record<string, string | number> = {};
+    if (filterDateFrom) common.date_from = filterDateFrom;
+    if (filterDateTo) common.date_to = filterDateTo;
+    if (filterMonth) common.month = filterMonth;
+    if (filterYear) {
+      const y = parseInt(filterYear, 10);
+      if (!Number.isNaN(y)) common.year = y;
+    }
+    return common;
+  };
+
   const handleExport = async () => {
     try {
-      setLoading(true);
-      const commonParams: any = {};
-      if (filterDateFrom) commonParams.date_from = filterDateFrom;
-      if (filterDateTo) commonParams.date_to = filterDateTo;
-      if (filterMonth) commonParams.month = filterMonth;
-      if (filterYear) commonParams.year = parseInt(filterYear);
+      setExporting(true);
+      const commonParams = buildExportCommonParams();
 
       switch (activeReport) {
-        case "attendance":
+        case "attendance": {
           const attendanceParams = { ...commonParams };
           if (filterType) attendanceParams.type = filterType;
           if (filterStatus) attendanceParams.status = filterStatus;
           await reportsApi.exportAttendanceReport(attendanceParams);
           break;
-
-        case "financial":
+        }
+        case "financial": {
           const financialParams = { ...commonParams };
           if (filterBatch) financialParams.batch = filterBatch;
           if (filterModule) financialParams.module_id = filterModule;
           await reportsApi.exportFinancialReport(financialParams);
           break;
-
-        case "enrollment":
+        }
+        case "enrollment": {
           const enrollmentParams = { ...commonParams };
           if (filterBatch) enrollmentParams.batch = filterBatch;
           if (filterStatus) enrollmentParams.status = filterStatus;
           await reportsApi.exportEnrollmentReport(enrollmentParams);
           break;
-
-        case "performance":
+        }
+        case "performance": {
           const performanceParams = { ...commonParams };
           if (filterBatch) performanceParams.batch = filterBatch;
           if (filterModule) performanceParams.module_id = filterModule;
           await reportsApi.exportPerformanceReport(performanceParams);
           break;
+        }
       }
-      alert("Report exported successfully!");
-    } catch (error: any) {
-      alert(error.message || "Failed to export report");
+      showNotice({
+        title: "Download complete",
+        message: "Report downloaded successfully.",
+        variant: "success",
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to download report";
+      showNotice({ message, variant: "error" });
     } finally {
-      setLoading(false);
+      setExporting(false);
     }
   };
 
@@ -206,54 +288,54 @@ export default function ReportsPage() {
       <div className="space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Total Records</p>
-                  <p className="text-2xl font-bold text-base-content">{summary?.total_records || 0}</p>
+                  <p className="text-sm text-muted-foreground">Total Records</p>
+                  <p className="text-2xl font-bold text-foreground">{summary?.total_records || 0}</p>
                 </div>
                 <ClipboardCheck className="h-8 w-8 text-primary" />
               </div>
             </div>
           </div>
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Present</p>
+                  <p className="text-sm text-muted-foreground">Present</p>
                   <p className="text-2xl font-bold text-success">{summary?.present || 0}</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-success" />
               </div>
             </div>
           </div>
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Late</p>
-                  <p className="text-2xl font-bold text-warning">{summary?.late || 0}</p>
+                  <p className="text-sm text-muted-foreground">Late</p>
+                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{summary?.late || 0}</p>
                 </div>
-                <Calendar className="h-8 w-8 text-warning" />
+                <Calendar className="h-8 w-8 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
           </div>
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Absent</p>
-                  <p className="text-2xl font-bold text-error">{summary?.absent || 0}</p>
+                  <p className="text-sm text-muted-foreground">Absent</p>
+                  <p className="text-2xl font-bold text-destructive">{summary?.absent || 0}</p>
                 </div>
-                <Users className="h-8 w-8 text-error" />
+                <Users className="h-8 w-8 text-destructive" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Report Table */}
-        <div className="card bg-base-100 border border-base-300 shadow-md">
+        <div className="card bg-card border border-border shadow-md">
           <div className="card-body p-0">
             {loading ? (
               <div className="flex justify-center py-12">
@@ -261,14 +343,14 @@ export default function ReportsPage() {
               </div>
             ) : attendances.length === 0 ? (
               <div className="text-center py-12">
-                <ClipboardCheck className="h-16 w-16 mx-auto text-base-content/30 mb-4" />
-                <p className="text-base-content/70">No attendance records found</p>
+                <ClipboardCheck className="h-16 w-16 mx-auto text-foreground/30 mb-4" />
+                <p className="text-muted-foreground">No attendance records found</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="table table-zebra w-full">
                   <thead>
-                    <tr className="bg-base-200">
+                    <tr className="bg-muted">
                       <th>Type</th>
                       <th>Name</th>
                       <th>Admission #</th>
@@ -286,8 +368,8 @@ export default function ReportsPage() {
                             {attendance.type}
                           </span>
                         </td>
-                        <td className="font-semibold text-base-content">{attendance.name}</td>
-                        <td className="text-base-content/70">
+                        <td className="font-semibold text-foreground">{attendance.name}</td>
+                        <td className="text-muted-foreground">
                           {attendance.admission_number || "N/A"}
                         </td>
                         <td>{new Date(attendance.date).toLocaleDateString()}</td>
@@ -313,6 +395,18 @@ export default function ReportsPage() {
               </div>
             )}
           </div>
+          {!loading && attendances.length > 0 && reportPagination ? (
+            <Pagination
+              currentPage={reportPagination.current_page}
+              lastPage={reportPagination.last_page}
+              total={reportPagination.total}
+              from={reportPagination.from}
+              to={reportPagination.to}
+              loading={loading}
+              onPageChange={handleReportPageChange}
+              itemName="records"
+            />
+          ) : null}
         </div>
       </div>
     );
@@ -325,22 +419,22 @@ export default function ReportsPage() {
       <div className="space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Total Payments</p>
-                  <p className="text-2xl font-bold text-base-content">{summary?.total_payments || 0}</p>
+                  <p className="text-sm text-muted-foreground">Total Payments</p>
+                  <p className="text-2xl font-bold text-foreground">{summary?.total_payments || 0}</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-primary" />
               </div>
             </div>
           </div>
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Total Amount</p>
+                  <p className="text-sm text-muted-foreground">Total Amount</p>
                   <p className="text-2xl font-bold text-success">
                     {formatCurrency(summary?.total_amount || 0)}
                   </p>
@@ -349,11 +443,11 @@ export default function ReportsPage() {
               </div>
             </div>
           </div>
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Total Paid</p>
+                  <p className="text-sm text-muted-foreground">Total Paid</p>
                   <p className="text-2xl font-bold text-primary">
                     {formatCurrency(summary?.total_paid || 0)}
                   </p>
@@ -362,23 +456,23 @@ export default function ReportsPage() {
               </div>
             </div>
           </div>
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Total Discount</p>
-                  <p className="text-2xl font-bold text-warning">
+                  <p className="text-sm text-muted-foreground">Total Discount</p>
+                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
                     {formatCurrency(summary?.total_discount || 0)}
                   </p>
                 </div>
-                <BarChart3 className="h-8 w-8 text-warning" />
+                <BarChart3 className="h-8 w-8 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Report Table */}
-        <div className="card bg-base-100 border border-base-300 shadow-md">
+        <div className="card bg-card border border-border shadow-md">
           <div className="card-body p-0">
             {loading ? (
               <div className="flex justify-center py-12">
@@ -386,14 +480,14 @@ export default function ReportsPage() {
               </div>
             ) : payments.length === 0 ? (
               <div className="text-center py-12">
-                <DollarSign className="h-16 w-16 mx-auto text-base-content/30 mb-4" />
-                <p className="text-base-content/70">No payment records found</p>
+                <DollarSign className="h-16 w-16 mx-auto text-foreground/30 mb-4" />
+                <p className="text-muted-foreground">No payment records found</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="table table-zebra w-full">
                   <thead>
-                    <tr className="bg-base-200">
+                    <tr className="bg-muted">
                       <th>Receipt #</th>
                       <th>Student</th>
                       <th>Batch</th>
@@ -412,14 +506,14 @@ export default function ReportsPage() {
                         <td className="font-mono text-sm">{payment.receipt_number || "N/A"}</td>
                         <td>
                           <div>
-                            <div className="font-semibold text-base-content">{payment.student_name}</div>
-                            <div className="text-sm text-base-content/70">{payment.admission_number}</div>
+                            <div className="font-semibold text-foreground">{payment.student_name}</div>
+                            <div className="text-sm text-muted-foreground">{payment.admission_number}</div>
                           </div>
                         </td>
                         <td>{payment.batch}</td>
                         <td>{payment.module}</td>
                         <td className="font-semibold">{formatCurrency(payment.amount)}</td>
-                        <td className="text-error">
+                        <td className="text-destructive">
                           {payment.discount_amount > 0 ? formatCurrency(payment.discount_amount) : "-"}
                         </td>
                         <td className="font-semibold text-success">{formatCurrency(payment.paid_amount)}</td>
@@ -449,6 +543,18 @@ export default function ReportsPage() {
               </div>
             )}
           </div>
+          {!loading && payments.length > 0 && reportPagination ? (
+            <Pagination
+              currentPage={reportPagination.current_page}
+              lastPage={reportPagination.last_page}
+              total={reportPagination.total}
+              from={reportPagination.from}
+              to={reportPagination.to}
+              loading={loading}
+              onPageChange={handleReportPageChange}
+              itemName="payments"
+            />
+          ) : null}
         </div>
       </div>
     );
@@ -462,22 +568,22 @@ export default function ReportsPage() {
       <div className="space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Total Students</p>
-                  <p className="text-2xl font-bold text-base-content">{summary?.total_students || 0}</p>
+                  <p className="text-sm text-muted-foreground">Total Students</p>
+                  <p className="text-2xl font-bold text-foreground">{summary?.total_students || 0}</p>
                 </div>
                 <Users className="h-8 w-8 text-primary" />
               </div>
             </div>
           </div>
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Total Revenue</p>
+                  <p className="text-sm text-muted-foreground">Total Revenue</p>
                   <p className="text-2xl font-bold text-success">
                     {formatCurrency(summary?.total_revenue || 0)}
                   </p>
@@ -486,11 +592,11 @@ export default function ReportsPage() {
               </div>
             </div>
           </div>
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Module Fees</p>
+                  <p className="text-sm text-muted-foreground">Module Fees</p>
                   <p className="text-2xl font-bold text-primary">
                     {formatCurrency(summary?.total_module_fees || 0)}
                   </p>
@@ -499,11 +605,11 @@ export default function ReportsPage() {
               </div>
             </div>
           </div>
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Active Students</p>
+                  <p className="text-sm text-muted-foreground">Active Students</p>
                   <p className="text-2xl font-bold text-success">
                     {summary?.by_status?.active || 0}
                   </p>
@@ -516,16 +622,16 @@ export default function ReportsPage() {
 
         {/* Module Enrollments */}
         {moduleEnrollments.length > 0 && (
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body">
-              <h3 className="text-lg font-semibold text-base-content mb-4">Module Enrollments</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Module Enrollments</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {moduleEnrollments.map((mod: any, idx: number) => (
-                  <div key={idx} className="card bg-base-200 border border-base-300 p-4">
+                  <div key={idx} className="card bg-muted border border-border p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-semibold text-base-content">{mod.module_name}</p>
-                        <p className="text-sm text-base-content/70">{mod.count} students</p>
+                        <p className="font-semibold text-foreground">{mod.module_name}</p>
+                        <p className="text-sm text-muted-foreground">{mod.count} students</p>
                       </div>
                       <BookOpen className="h-6 w-6 text-primary" />
                     </div>
@@ -537,7 +643,7 @@ export default function ReportsPage() {
         )}
 
         {/* Report Table */}
-        <div className="card bg-base-100 border border-base-300 shadow-md">
+        <div className="card bg-card border border-border shadow-md">
           <div className="card-body p-0">
             {loading ? (
               <div className="flex justify-center py-12">
@@ -545,14 +651,14 @@ export default function ReportsPage() {
               </div>
             ) : students.length === 0 ? (
               <div className="text-center py-12">
-                <Users className="h-16 w-16 mx-auto text-base-content/30 mb-4" />
-                <p className="text-base-content/70">No student records found</p>
+                <Users className="h-16 w-16 mx-auto text-foreground/30 mb-4" />
+                <p className="text-muted-foreground">No student records found</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="table table-zebra w-full">
                   <thead>
-                    <tr className="bg-base-200">
+                    <tr className="bg-muted">
                       <th>Admission #</th>
                       <th>Name</th>
                       <th>Batch</th>
@@ -569,7 +675,7 @@ export default function ReportsPage() {
                     {students.map((student: any) => (
                       <tr key={student.id} className="hover">
                         <td className="font-mono text-sm">{student.admission_number}</td>
-                        <td className="font-semibold text-base-content">{student.full_name}</td>
+                        <td className="font-semibold text-foreground">{student.full_name}</td>
                         <td>{student.batch}</td>
                         <td>
                           <span className="badge badge-outline badge-sm capitalize">
@@ -608,6 +714,18 @@ export default function ReportsPage() {
               </div>
             )}
           </div>
+          {!loading && students.length > 0 && reportPagination ? (
+            <Pagination
+              currentPage={reportPagination.current_page}
+              lastPage={reportPagination.last_page}
+              total={reportPagination.total}
+              from={reportPagination.from}
+              to={reportPagination.to}
+              loading={loading}
+              onPageChange={handleReportPageChange}
+              itemName="students"
+            />
+          ) : null}
         </div>
       </div>
     );
@@ -620,12 +738,12 @@ export default function ReportsPage() {
       <div className="space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Total Questionnaires</p>
-                  <p className="text-2xl font-bold text-base-content">
+                  <p className="text-sm text-muted-foreground">Total Questionnaires</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {summary?.total_questionnaires || 0}
                   </p>
                 </div>
@@ -633,11 +751,11 @@ export default function ReportsPage() {
               </div>
             </div>
           </div>
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Total Questions</p>
+                  <p className="text-sm text-muted-foreground">Total Questions</p>
                   <p className="text-2xl font-bold text-success">
                     {summary?.total_questions || 0}
                   </p>
@@ -646,11 +764,11 @@ export default function ReportsPage() {
               </div>
             </div>
           </div>
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Avg Questions/Paper</p>
+                  <p className="text-sm text-muted-foreground">Avg Questions/Paper</p>
                   <p className="text-2xl font-bold text-primary">
                     {summary?.average_questions_per_paper || 0}
                   </p>
@@ -659,23 +777,23 @@ export default function ReportsPage() {
               </div>
             </div>
           </div>
-          <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card bg-card border border-border shadow-sm">
             <div className="card-body p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-base-content/70">Modules</p>
-                  <p className="text-2xl font-bold text-base-content">
+                  <p className="text-sm text-muted-foreground">Modules</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {Object.keys(summary?.by_module || {}).length}
                   </p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-base-content" />
+                <TrendingUp className="h-8 w-8 text-foreground" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Report Table */}
-        <div className="card bg-base-100 border border-base-300 shadow-md">
+        <div className="card bg-card border border-border shadow-md">
           <div className="card-body p-0">
             {loading ? (
               <div className="flex justify-center py-12">
@@ -683,14 +801,14 @@ export default function ReportsPage() {
               </div>
             ) : questionnaires.length === 0 ? (
               <div className="text-center py-12">
-                <BookOpen className="h-16 w-16 mx-auto text-base-content/30 mb-4" />
-                <p className="text-base-content/70">No questionnaire records found</p>
+                <BookOpen className="h-16 w-16 mx-auto text-foreground/30 mb-4" />
+                <p className="text-muted-foreground">No questionnaire records found</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="table table-zebra w-full">
                   <thead>
-                    <tr className="bg-base-200">
+                    <tr className="bg-muted">
                       <th>Title</th>
                       <th>Module</th>
                       <th>Batch</th>
@@ -703,7 +821,7 @@ export default function ReportsPage() {
                   <tbody>
                     {questionnaires.map((questionnaire: any) => (
                       <tr key={questionnaire.id} className="hover">
-                        <td className="font-semibold text-base-content">{questionnaire.title}</td>
+                        <td className="font-semibold text-foreground">{questionnaire.title}</td>
                         <td>
                           <span className="badge badge-primary badge-sm">{questionnaire.module}</span>
                         </td>
@@ -742,6 +860,18 @@ export default function ReportsPage() {
               </div>
             )}
           </div>
+          {!loading && questionnaires.length > 0 && reportPagination && reportPagination.last_page > 1 ? (
+            <Pagination
+              currentPage={reportPagination.current_page}
+              lastPage={reportPagination.last_page}
+              total={reportPagination.total}
+              from={reportPagination.from}
+              to={reportPagination.to}
+              loading={loading}
+              onPageChange={handleReportPageChange}
+              itemName="questionnaires"
+            />
+          ) : null}
         </div>
       </div>
     );
@@ -752,18 +882,26 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-base-content">Reports</h1>
-          <p className="text-base-content/70 mt-2">View and generate comprehensive reports</p>
+          <h1 className="text-3xl font-bold text-foreground">Reports</h1>
+          <p className="text-muted-foreground mt-2">View and generate comprehensive reports</p>
         </div>
         <div className="flex gap-2 flex-wrap items-center flex-shrink-0">
           <button
+            type="button"
             className="btn btn-primary gap-2 items-center px-6"
             onClick={handleExport}
-            disabled={loading}
+            disabled={loading || exporting}
+            title="Download full report as Excel using the filters below (all matching rows)"
           >
-            <Download className="h-5 w-5" />
-            <span className="hidden sm:inline whitespace-nowrap">Export to Excel</span>
-            <span className="sm:hidden">Export</span>
+            {exporting ? (
+              <span className="loading loading-spinner loading-sm" />
+            ) : (
+              <Download className="h-5 w-5" />
+            )}
+            <span className="hidden sm:inline whitespace-nowrap">
+              {exporting ? "Downloading…" : "Download Excel"}
+            </span>
+            <span className="sm:hidden">{exporting ? "…" : "Download"}</span>
           </button>
         </div>
       </div>
@@ -800,25 +938,48 @@ export default function ReportsPage() {
       </IconTabs>
 
       {/* Filters */}
-      <div className="card bg-base-100 border border-base-300 shadow-sm">
+      <div className="card bg-card border border-border shadow-sm">
         <div className="card-body p-4 sm:p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-base-content">Filters</h3>
-            <button
-              className="btn btn-outline btn-sm gap-2 items-center"
-              onClick={handleResetFilters}
-              title="Reset all filters"
-            >
-              <RotateCcw className="h-4 w-4" />
-              <span className="hidden sm:inline">Reset Filters</span>
-              <span className="sm:hidden">Reset</span>
-            </button>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Filters</h3>
+              <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+                Downloads use these filters and include every matching row (not only the current table page).
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="btn btn-primary btn-sm gap-2 items-center"
+                onClick={handleExport}
+                disabled={loading || exporting}
+                title="Download Excel for the active report"
+              >
+                {exporting ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                <span className="whitespace-nowrap">{exporting ? "Downloading…" : "Download Excel"}</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm gap-2 items-center"
+                onClick={handleResetFilters}
+                title="Reset all filters"
+                disabled={exporting}
+              >
+                <RotateCcw className="h-4 w-4" />
+                <span className="hidden sm:inline">Reset filters</span>
+                <span className="sm:hidden">Reset</span>
+              </button>
+            </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 flex-wrap">
             <div className="form-control flex-shrink-0 sm:w-48">
               <input
                 type="date"
-                className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                 value={filterDateFrom}
                 onChange={(e) => setFilterDateFrom(e.target.value)}
                 placeholder="Date From"
@@ -827,7 +988,7 @@ export default function ReportsPage() {
             <div className="form-control flex-shrink-0 sm:w-48">
               <input
                 type="date"
-                className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                 value={filterDateTo}
                 onChange={(e) => setFilterDateTo(e.target.value)}
                 placeholder="Date To"
@@ -836,7 +997,7 @@ export default function ReportsPage() {
             <div className="form-control flex-shrink-0 sm:w-48">
               <input
                 type="month"
-                className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                 value={filterMonth}
                 onChange={(e) => setFilterMonth(e.target.value)}
                 placeholder="Month"
@@ -844,7 +1005,7 @@ export default function ReportsPage() {
                       </div>
             <div className="form-control flex-shrink-0 sm:w-48">
               <select
-                className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                 value={filterYear}
                 onChange={(e) => setFilterYear(e.target.value)}
               >
@@ -862,7 +1023,7 @@ export default function ReportsPage() {
               <>
                 <div className="form-control flex-shrink-0 sm:w-48">
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={filterType}
                     onChange={(e) => setFilterType(e.target.value as any)}
                   >
@@ -873,7 +1034,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="form-control flex-shrink-0 sm:w-48">
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
                   >
@@ -892,7 +1053,7 @@ export default function ReportsPage() {
               <>
                 <div className="form-control flex-shrink-0 sm:w-48">
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={filterBatch}
                     onChange={(e) => setFilterBatch(e.target.value)}
                   >
@@ -906,7 +1067,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="form-control flex-shrink-0 sm:w-48">
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={filterModule}
                     onChange={(e) => setFilterModule(e.target.value)}
                   >
@@ -926,7 +1087,7 @@ export default function ReportsPage() {
               <>
                 <div className="form-control flex-shrink-0 sm:w-48">
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={filterBatch}
                     onChange={(e) => setFilterBatch(e.target.value)}
                   >
@@ -940,7 +1101,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="form-control flex-shrink-0 sm:w-48">
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
                   >
@@ -959,7 +1120,7 @@ export default function ReportsPage() {
               <>
                 <div className="form-control flex-shrink-0 sm:w-48">
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={filterBatch}
                     onChange={(e) => setFilterBatch(e.target.value)}
                   >
@@ -973,7 +1134,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="form-control flex-shrink-0 sm:w-48">
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={filterModule}
                     onChange={(e) => setFilterModule(e.target.value)}
                   >

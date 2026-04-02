@@ -1,3 +1,6 @@
+import type { PhotoFolder, PhotoLibraryFile } from "@/app/types/photo-library";
+import type { GalleryCategory, GalleryImage } from "@/app/types/gallery";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 interface ApiResponse<T> {
@@ -52,10 +55,21 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: 'An error occurred',
-      }));
-      throw new Error(error.message || 'Request failed');
+      const error = await response.json().catch(() => ({} as Record<string, unknown>));
+      let message =
+        typeof error.message === "string" && error.message.trim() !== ""
+          ? error.message
+          : "Request failed";
+      const errs = error.errors;
+      if (errs && typeof errs === "object" && errs !== null) {
+        for (const v of Object.values(errs)) {
+          if (Array.isArray(v) && typeof v[0] === "string" && v[0].trim() !== "") {
+            message = v[0];
+            break;
+          }
+        }
+      }
+      throw new Error(message);
     }
 
     return response.json();
@@ -85,6 +99,47 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+
+/**
+ * Fetches a report Excel export and triggers a browser download.
+ * Uses current filters; server returns the full filtered dataset (not paginated).
+ */
+export async function downloadReportExcel(
+  pathAndQuery: string,
+  filename: string
+): Promise<void> {
+  const base = API_BASE_URL.replace(/\/$/, "");
+  const path = pathAndQuery.startsWith("/") ? pathAndQuery : `/${pathAndQuery}`;
+  const url = `${base}${path}`;
+  const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+
+  const response = await fetch(url, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      Accept:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json;q=0.9",
+    },
+  });
+
+  if (!response.ok) {
+    const ct = response.headers.get("content-type") || "";
+    if (ct.includes("application/json")) {
+      const err = (await response.json().catch(() => ({}))) as { message?: string };
+      throw new Error(err.message || `Download failed (${response.status})`);
+    }
+    throw new Error(`Download failed (${response.status})`);
+  }
+
+  const blob = await response.blob();
+  const objectUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(objectUrl);
+}
 
 // Auth API
 export const authApi = {
@@ -509,6 +564,98 @@ export const questionnairesApi = {
   },
 };
 
+export const photoLibraryApi = {
+  listFolders: async (parentId: string | null) => {
+    const q =
+      parentId != null && parentId !== ""
+        ? `?parent_id=${encodeURIComponent(parentId)}`
+        : "";
+    return apiClient.get<{ folders: PhotoFolder[] }>(`/photo-library/folders${q}`);
+  },
+
+  createFolder: async (data: { name: string; parent_id?: string | null }) => {
+    return apiClient.post<{ folder: PhotoFolder; message?: string }>("/photo-library/folders", {
+      name: data.name,
+      parent_id: data.parent_id ? Number(data.parent_id) : null,
+    });
+  },
+
+  updateFolder: async (id: string, name: string) => {
+    return apiClient.put<{ folder: PhotoFolder }>(`/photo-library/folders/${id}`, { name });
+  },
+
+  deleteFolder: async (id: string) => {
+    return apiClient.delete<{ message: string }>(`/photo-library/folders/${id}`);
+  },
+
+  listFiles: async (folderId: string) => {
+    return apiClient.get<{ files: PhotoLibraryFile[] }>(
+      `/photo-library/folders/${folderId}/images`
+    );
+  },
+
+  uploadFile: async (folderId: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return apiClient.post<{ file: PhotoLibraryFile }>(
+      `/photo-library/folders/${folderId}/images`,
+      form
+    );
+  },
+
+  updateFile: async (id: string, is_active: boolean) => {
+    return apiClient.put<{ file: PhotoLibraryFile }>(`/photo-library/images/${id}`, {
+      is_active,
+    });
+  },
+
+  deleteFile: async (id: string) => {
+    return apiClient.delete<{ message: string }>(`/photo-library/images/${id}`);
+  },
+};
+
+export const galleryApi = {
+  listCategories: async () => {
+    return apiClient.get<{ categories: GalleryCategory[] }>("/gallery/categories");
+  },
+
+  createCategory: async (data: { name: string; sort_order?: number }) => {
+    return apiClient.post<{ category: GalleryCategory; message?: string }>("/gallery/categories", data);
+  },
+
+  updateCategory: async (
+    id: string,
+    data: { name: string; sort_order?: number }
+  ) => {
+    return apiClient.put<{ category: GalleryCategory; message?: string }>(
+      `/gallery/categories/${id}`,
+      data
+    );
+  },
+
+  deleteCategory: async (id: string) => {
+    return apiClient.delete<{ message: string }>(`/gallery/categories/${id}`);
+  },
+
+  listImages: async (categoryId: string) => {
+    return apiClient.get<{ images: GalleryImage[] }>(`/gallery/categories/${categoryId}/images`);
+  },
+
+  /** Up to 5 image files per request (enforced server-side). */
+  uploadBulk: async (categoryId: string, files: File[]) => {
+    const form = new FormData();
+    files.forEach((file) => form.append("images[]", file));
+    return apiClient.post<{ images: GalleryImage[]; message?: string }>(
+      `/gallery/categories/${categoryId}/images/bulk`,
+      form
+    );
+  },
+
+  deleteImage: async (id: string) => {
+    return apiClient.delete<{ message: string }>(`/gallery/images/${id}`);
+  },
+};
+
 // Payments API
 export const paymentsApi = {
   getAll: async (params?: {
@@ -595,6 +742,101 @@ export const paymentsApi = {
   },
 };
 
+export const staffPayrollApi = {
+  getAll: async (params?: {
+    page?: number;
+    staff_id?: string;
+    pay_year?: number;
+    pay_month?: number;
+    pay_period?: string;
+    pay_type?: string;
+    payment_method?: string;
+    search?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append("page", params.page.toString());
+    if (params?.staff_id) queryParams.append("staff_id", params.staff_id);
+    if (params?.pay_year) queryParams.append("pay_year", params.pay_year.toString());
+    if (params?.pay_month) queryParams.append("pay_month", params.pay_month.toString());
+    if (params?.pay_period) queryParams.append("pay_period", params.pay_period);
+    if (params?.pay_type) queryParams.append("pay_type", params.pay_type);
+    if (params?.payment_method) queryParams.append("payment_method", params.payment_method);
+    if (params?.search) queryParams.append("search", params.search);
+
+    const queryString = queryParams.toString();
+    return apiClient.get<{ payroll_payments: any[]; pagination?: any }>(
+      `/staff-payroll?${queryString}`
+    );
+  },
+
+  getByStaff: async (staffId: string, params?: { pay_year?: number }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.pay_year) queryParams.append("pay_year", params.pay_year.toString());
+    const queryString = queryParams.toString();
+    return apiClient.get<{
+      staff: { id: string; full_name: string; first_name: string; last_name: string };
+      payroll_payments: any[];
+      totals_by_period: Record<string, number>;
+    }>(`/staff-payroll/staff/${staffId}${queryString ? `?${queryString}` : ""}`);
+  },
+
+  getById: async (id: string) => {
+    return apiClient.get<{ payroll_payment: any }>(`/staff-payroll/${id}`);
+  },
+
+  create: async (data: {
+    staff_id: number;
+    pay_period: string;
+    pay_type: string;
+    gross_amount?: number | null;
+    deductions?: number;
+    net_amount: number;
+    payment_date: string;
+    payment_method: string;
+    account_holder_name?: string | null;
+    bank_name?: string | null;
+    account_number?: string | null;
+    bank_branch?: string | null;
+    iban_swift?: string | null;
+    transfer_reference?: string | null;
+    transfer_memo?: string | null;
+    internal_notes?: string | null;
+  }) => {
+    return apiClient.post<{ payroll_payment: any; message?: string }>("/staff-payroll", data);
+  },
+
+  update: async (
+    id: string,
+    data: {
+      staff_id?: number;
+      pay_period?: string;
+      pay_type: string;
+      gross_amount?: number | null;
+      deductions?: number;
+      net_amount: number;
+      payment_date: string;
+      payment_method: string;
+      account_holder_name?: string | null;
+      bank_name?: string | null;
+      account_number?: string | null;
+      bank_branch?: string | null;
+      iban_swift?: string | null;
+      transfer_reference?: string | null;
+      transfer_memo?: string | null;
+      internal_notes?: string | null;
+    }
+  ) => {
+    return apiClient.put<{ payroll_payment: any; message?: string }>(
+      `/staff-payroll/${id}`,
+      data
+    );
+  },
+
+  delete: async (id: string) => {
+    return apiClient.delete<{ message: string }>(`/staff-payroll/${id}`);
+  },
+};
+
 // Attendance API
 export const attendancesApi = {
   getAll: async (params?: {
@@ -661,6 +903,15 @@ export const attendancesApi = {
   },
 };
 
+export interface ReportPagination {
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+  from: number;
+  to: number;
+}
+
 // Reports API
 export const reportsApi = {
   getAttendanceReport: async (params?: {
@@ -670,6 +921,8 @@ export const reportsApi = {
     month?: string;
     year?: number;
     status?: "present" | "absent" | "late" | "early_leave";
+    page?: number;
+    per_page?: number;
   }) => {
     const queryParams = new URLSearchParams();
     if (params?.type) queryParams.append("type", params.type);
@@ -678,11 +931,15 @@ export const reportsApi = {
     if (params?.month) queryParams.append("month", params.month);
     if (params?.year) queryParams.append("year", params.year.toString());
     if (params?.status) queryParams.append("status", params.status);
+    if (params?.page != null) queryParams.append("page", String(params.page));
+    if (params?.per_page != null) queryParams.append("per_page", String(params.per_page));
 
     const queryString = queryParams.toString();
-    return apiClient.get<{ attendances: any[]; summary: any }>(
-      `/reports/attendance?${queryString}`
-    );
+    return apiClient.get<{
+      attendances: any[];
+      summary: any;
+      pagination?: ReportPagination;
+    }>(`/reports/attendance?${queryString}`);
   },
 
   getFinancialReport: async (params?: {
@@ -692,6 +949,8 @@ export const reportsApi = {
     year?: number;
     batch?: string;
     module_id?: string;
+    page?: number;
+    per_page?: number;
   }) => {
     const queryParams = new URLSearchParams();
     if (params?.date_from) queryParams.append("date_from", params.date_from);
@@ -700,11 +959,15 @@ export const reportsApi = {
     if (params?.year) queryParams.append("year", params.year.toString());
     if (params?.batch) queryParams.append("batch", params.batch);
     if (params?.module_id) queryParams.append("module_id", params.module_id);
+    if (params?.page != null) queryParams.append("page", String(params.page));
+    if (params?.per_page != null) queryParams.append("per_page", String(params.per_page));
 
     const queryString = queryParams.toString();
-    return apiClient.get<{ payments: any[]; summary: any }>(
-      `/reports/financial?${queryString}`
-    );
+    return apiClient.get<{
+      payments: any[];
+      summary: any;
+      pagination?: ReportPagination;
+    }>(`/reports/financial?${queryString}`);
   },
 
   getEnrollmentReport: async (params?: {
@@ -714,6 +977,8 @@ export const reportsApi = {
     date_to?: string;
     month?: string;
     year?: number;
+    page?: number;
+    per_page?: number;
   }) => {
     const queryParams = new URLSearchParams();
     if (params?.batch) queryParams.append("batch", params.batch);
@@ -722,11 +987,16 @@ export const reportsApi = {
     if (params?.date_to) queryParams.append("date_to", params.date_to);
     if (params?.month) queryParams.append("month", params.month);
     if (params?.year) queryParams.append("year", params.year.toString());
+    if (params?.page != null) queryParams.append("page", String(params.page));
+    if (params?.per_page != null) queryParams.append("per_page", String(params.per_page));
 
     const queryString = queryParams.toString();
-    return apiClient.get<{ students: any[]; summary: any; module_enrollments: any[] }>(
-      `/reports/enrollment?${queryString}`
-    );
+    return apiClient.get<{
+      students: any[];
+      summary: any;
+      module_enrollments: any[];
+      pagination?: ReportPagination;
+    }>(`/reports/enrollment?${queryString}`);
   },
 
   getPerformanceReport: async (params?: {
@@ -736,6 +1006,8 @@ export const reportsApi = {
     date_to?: string;
     month?: string;
     year?: number;
+    page?: number;
+    per_page?: number;
   }) => {
     const queryParams = new URLSearchParams();
     if (params?.module_id) queryParams.append("module_id", params.module_id);
@@ -744,11 +1016,15 @@ export const reportsApi = {
     if (params?.date_to) queryParams.append("date_to", params.date_to);
     if (params?.month) queryParams.append("month", params.month);
     if (params?.year) queryParams.append("year", params.year.toString());
+    if (params?.page != null) queryParams.append("page", String(params.page));
+    if (params?.per_page != null) queryParams.append("per_page", String(params.per_page));
 
     const queryString = queryParams.toString();
-    return apiClient.get<{ questionnaires: any[]; summary: any }>(
-      `/reports/performance?${queryString}`
-    );
+    return apiClient.get<{
+      questionnaires: any[];
+      summary: any;
+      pagination?: ReportPagination;
+    }>(`/reports/performance?${queryString}`);
   },
 
   exportAttendanceReport: async (params?: {
@@ -764,34 +1040,17 @@ export const reportsApi = {
     if (params?.date_from) queryParams.append("date_from", params.date_from);
     if (params?.date_to) queryParams.append("date_to", params.date_to);
     if (params?.month) queryParams.append("month", params.month);
-    if (params?.year) queryParams.append("year", params.year.toString());
+    if (params?.year != null && !Number.isNaN(params.year)) {
+      queryParams.append("year", String(params.year));
+    }
     if (params?.status) queryParams.append("status", params.status);
 
-    const queryString = queryParams.toString();
-    const token = localStorage.getItem('auth_token');
-    const response = await fetch(
-      `${API_BASE_URL}/reports/attendance/export?${queryString}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        },
-      }
+    const qs = queryParams.toString();
+    const date = new Date().toISOString().split("T")[0];
+    await downloadReportExcel(
+      `/reports/attendance/export${qs ? `?${qs}` : ""}`,
+      `attendance_report_${date}.xlsx`
     );
-
-    if (!response.ok) {
-      throw new Error('Failed to export report');
-    }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `attendance_report_${new Date().toISOString().split('T')[0]}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
   },
 
   exportFinancialReport: async (params?: {
@@ -806,35 +1065,18 @@ export const reportsApi = {
     if (params?.date_from) queryParams.append("date_from", params.date_from);
     if (params?.date_to) queryParams.append("date_to", params.date_to);
     if (params?.month) queryParams.append("month", params.month);
-    if (params?.year) queryParams.append("year", params.year.toString());
+    if (params?.year != null && !Number.isNaN(params.year)) {
+      queryParams.append("year", String(params.year));
+    }
     if (params?.batch) queryParams.append("batch", params.batch);
     if (params?.module_id) queryParams.append("module_id", params.module_id);
 
-    const queryString = queryParams.toString();
-    const token = localStorage.getItem('auth_token');
-    const response = await fetch(
-      `${API_BASE_URL}/reports/financial/export?${queryString}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        },
-      }
+    const qs = queryParams.toString();
+    const date = new Date().toISOString().split("T")[0];
+    await downloadReportExcel(
+      `/reports/financial/export${qs ? `?${qs}` : ""}`,
+      `financial_report_${date}.xlsx`
     );
-
-    if (!response.ok) {
-      throw new Error('Failed to export report');
-    }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `financial_report_${new Date().toISOString().split('T')[0]}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
   },
 
   exportEnrollmentReport: async (params?: {
@@ -851,33 +1093,16 @@ export const reportsApi = {
     if (params?.date_from) queryParams.append("date_from", params.date_from);
     if (params?.date_to) queryParams.append("date_to", params.date_to);
     if (params?.month) queryParams.append("month", params.month);
-    if (params?.year) queryParams.append("year", params.year.toString());
-
-    const queryString = queryParams.toString();
-    const token = localStorage.getItem('auth_token');
-    const response = await fetch(
-      `${API_BASE_URL}/reports/enrollment/export?${queryString}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to export report');
+    if (params?.year != null && !Number.isNaN(params.year)) {
+      queryParams.append("year", String(params.year));
     }
 
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `enrollment_report_${new Date().toISOString().split('T')[0]}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    const qs = queryParams.toString();
+    const date = new Date().toISOString().split("T")[0];
+    await downloadReportExcel(
+      `/reports/enrollment/export${qs ? `?${qs}` : ""}`,
+      `enrollment_report_${date}.xlsx`
+    );
   },
 
   exportPerformanceReport: async (params?: {
@@ -894,32 +1119,15 @@ export const reportsApi = {
     if (params?.date_from) queryParams.append("date_from", params.date_from);
     if (params?.date_to) queryParams.append("date_to", params.date_to);
     if (params?.month) queryParams.append("month", params.month);
-    if (params?.year) queryParams.append("year", params.year.toString());
-
-    const queryString = queryParams.toString();
-    const token = localStorage.getItem('auth_token');
-    const response = await fetch(
-      `${API_BASE_URL}/reports/performance/export?${queryString}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to export report');
+    if (params?.year != null && !Number.isNaN(params.year)) {
+      queryParams.append("year", String(params.year));
     }
 
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `performance_report_${new Date().toISOString().split('T')[0]}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    const qs = queryParams.toString();
+    const date = new Date().toISOString().split("T")[0];
+    await downloadReportExcel(
+      `/reports/performance/export${qs ? `?${qs}` : ""}`,
+      `performance_report_${date}.xlsx`
+    );
   },
 };

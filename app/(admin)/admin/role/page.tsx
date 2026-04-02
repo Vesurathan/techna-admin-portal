@@ -6,16 +6,20 @@ import { Role, Permission } from "@/app/types/role";
 import { rolesApi } from "@/app/lib/api";
 import { Plus, Edit, Trash2, Shield } from "lucide-react";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
+import { useAppNotice } from "@/app/contexts/AppNoticeContext";
 
 const allPermissions: Permission[] = [
   "dashboard",
+  "attendance",
   "modules",
   "students",
   "staffs",
   "timetables",
   "questionbank",
   "payments",
+  "salary_payroll",
   "reports",
+  "photo_library",
   "role",
 ];
 
@@ -28,12 +32,15 @@ const permissionLabels: Record<Permission, string> = {
   timetables: "Time Tables",
   questionbank: "Question Bank",
   payments: "Payments",
+  salary_payroll: "Salary & Payroll",
   reports: "Reports",
+  photo_library: "Drive & website gallery",
   role: "Role",
 };
 
 export default function RolePage() {
   const { isSuperAdmin, refreshUser } = useAuth();
+  const { showNotice } = useAppNotice();
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,9 +78,9 @@ export default function RolePage() {
     return (
       <div className="flex h-96 items-center justify-center">
         <div className="text-center">
-          <Shield className="mx-auto h-16 w-16 text-error mb-4" />
+          <Shield className="mx-auto h-16 w-16 text-destructive mb-4" />
           <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
-          <p className="text-base-content/70">
+          <p className="text-muted-foreground">
             Only Super Admins can manage roles and permissions.
           </p>
         </div>
@@ -127,7 +134,10 @@ export default function RolePage() {
       await refreshUser(); // Refresh user to get updated permissions
       handleCloseModal();
     } catch (error: any) {
-      alert(error.message || "Failed to save role");
+      showNotice({
+        message: error.message || "Failed to save role",
+        variant: "error",
+      });
     }
   };
 
@@ -138,7 +148,10 @@ export default function RolePage() {
       await loadRoles();
       setDeleteRole(null);
     } catch (error: any) {
-      alert(error.message || "Failed to delete role");
+      showNotice({
+        message: error.message || "Failed to delete role",
+        variant: "error",
+      });
     }
   };
 
@@ -155,8 +168,8 @@ export default function RolePage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-base-content">Role Management</h1>
-          <p className="text-base-content/70 mt-2">
+          <h1 className="text-3xl font-bold text-foreground">Role Management</h1>
+          <p className="text-muted-foreground mt-2">
             Manage roles and their permissions
           </p>
         </div>
@@ -172,7 +185,7 @@ export default function RolePage() {
         </div>
       </div>
 
-      <div className="card bg-base-100 border border-base-300 shadow-md">
+      <div className="card bg-card border border-border shadow-md">
         <div className="card-body p-0">
           {loading ? (
             <div className="flex justify-center py-12">
@@ -182,10 +195,10 @@ export default function RolePage() {
             <div className="overflow-x-auto">
               <table className="table table-zebra w-full">
                 <thead>
-                  <tr className="bg-base-200">
-                    <th className="text-base-content font-semibold whitespace-nowrap">Role Name</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap">Permissions</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap text-right">Actions</th>
+                  <tr className="bg-muted">
+                    <th className="text-foreground font-semibold whitespace-nowrap">Role Name</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">Permissions</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -194,7 +207,7 @@ export default function RolePage() {
                     <td>
                       <div className="flex items-center gap-2 min-w-0">
                         <Shield className="h-5 w-5 text-primary flex-shrink-0" />
-                        <span className="font-semibold text-base-content truncate">{role.name}</span>
+                        <span className="font-semibold text-foreground truncate">{role.name}</span>
                         {role.isSuperAdmin && (
                           <span className="badge badge-primary badge-sm flex-shrink-0 whitespace-nowrap">
                             Super Admin
@@ -250,18 +263,17 @@ export default function RolePage() {
       {/* Modal */}
       {isModalOpen && (
         <dialog className="modal modal-open">
-          <div className="modal-box bg-base-100 border border-base-300 w-full max-w-2xl mx-4">
-            <h3 className="text-lg font-bold mb-4 text-base-content">
-              {editingRole ? "Edit Role" : "Create New Role"}
-            </h3>
+          <div className="modal-box bg-card border border-border w-full max-w-2xl mx-4">
+            <h3>{editingRole ? "Edit Role" : "Create New Role"}</h3>
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="admin-form-section space-y-6">
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">Role Name</span>
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">Role Name</span>
                 </label>
                 <input
                   type="text"
-                  className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                  className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                   value={formData.name}
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
@@ -271,8 +283,8 @@ export default function RolePage() {
               </div>
 
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">Permissions</span>
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">Permissions</span>
                 </label>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {allPermissions.map((permission) => (
@@ -293,8 +305,9 @@ export default function RolePage() {
                   ))}
                 </div>
               </div>
+              </div>
 
-              <div className="modal-action flex justify-end gap-3 mt-8">
+              <div className="modal-action">
                 <button
                   type="button"
                   onClick={handleCloseModal}
@@ -321,7 +334,7 @@ export default function RolePage() {
         title="Delete role?"
         description={
           <>
-            <span className="font-medium text-base-content">{deleteRole?.name}</span> — assigned users
+            <span className="font-medium text-foreground">{deleteRole?.name}</span> — assigned users
             may lose access. This cannot be undone.
           </>
         }

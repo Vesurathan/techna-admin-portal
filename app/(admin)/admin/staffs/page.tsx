@@ -15,6 +15,7 @@ import {
   BookOpen,
   FileText,
   Shield,
+  Barcode,
 } from "lucide-react";
 import { staffsApi, modulesApi, rolesApi } from "@/app/lib/api";
 import {
@@ -29,8 +30,44 @@ import { ConfirmDialog } from "@/app/components/ConfirmDialog";
 import { RecordDetailModal, RecordDetailSectionTitle } from "@/app/components/RecordDetailModal";
 import Pagination from "@/app/components/Pagination";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { useAppNotice } from "@/app/contexts/AppNoticeContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { StaffAttendanceQr } from "@/app/components/StaffAttendanceQr";
 
 type ModalMode = "create" | "edit" | "view" | null;
+
+function mapApiStaffRecord(s: any): Staff {
+  const firstName = s.firstName || s.first_name || "";
+  const lastName = s.lastName || s.last_name || "";
+  return {
+    id: s.id.toString(),
+    barcode: s.barcode ?? null,
+    firstName: firstName,
+    lastName: lastName,
+    fullName: s.fullName || `${firstName} ${lastName}`.trim() || "Unknown Staff",
+    nicNumber: s.nicNumber || s.nic_number || null,
+    dateOfBirth: s.dateOfBirth || s.date_of_birth || "",
+    address: s.address || "",
+    gender: s.gender || "male",
+    bloodGroup: s.bloodGroup || s.blood_group || null,
+    schoolName: s.schoolName || s.school_name || null,
+    qualifications: s.qualifications || null,
+    secondaryPhone: s.secondaryPhone || s.secondary_phone || "",
+    secondaryPhoneHasWhatsapp: s.secondaryPhoneHasWhatsapp || s.secondary_phone_has_whatsapp || false,
+    medicalNotes: s.medicalNotes || s.medical_notes || null,
+    imagePath: s.imagePath || s.image_path || null,
+    status: s.status || "active",
+    account: s.account ?? null,
+    modules: (s.modules || []).map((m: any) => ({
+      id: m.id.toString(),
+      name: m.name,
+      category: m.category,
+      amount: Number(m.amount ?? 0),
+    })),
+    createdAt: s.createdAt || s.created_at,
+    updatedAt: s.updatedAt || s.updated_at,
+  };
+}
 
 const genderOptions: { value: Gender; label: string }[] = [
   { value: "male", label: "Male" },
@@ -57,12 +94,14 @@ const getStatusBadge = (status: StaffStatus) => {
 
 export default function StaffsPage() {
   const { isSuperAdmin } = useAuth();
+  const { showNotice } = useAppNotice();
   const [staffs, setStaffs] = useState<Staff[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Staff | null>(null);
+  const [newStaffForQr, setNewStaffForQr] = useState<Staff | null>(null);
   const [search, setSearch] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -132,37 +171,7 @@ export default function StaffsPage() {
         setCurrentPage(staffsRes.pagination.current_page);
       }
 
-      const mappedStaffs: Staff[] = staffsRes.staffs.map((s: any) => {
-        const firstName = s.firstName || s.first_name || "";
-        const lastName = s.lastName || s.last_name || "";
-        return {
-          id: s.id.toString(),
-          firstName: firstName,
-          lastName: lastName,
-          fullName: s.fullName || `${firstName} ${lastName}`.trim() || "Unknown Staff",
-          nicNumber: s.nicNumber || s.nic_number || null,
-          dateOfBirth: s.dateOfBirth || s.date_of_birth || "",
-          address: s.address || "",
-          gender: s.gender || "male",
-          bloodGroup: s.bloodGroup || s.blood_group || null,
-          schoolName: s.schoolName || s.school_name || null,
-          qualifications: s.qualifications || null,
-          secondaryPhone: s.secondaryPhone || s.secondary_phone || "",
-          secondaryPhoneHasWhatsapp: s.secondaryPhoneHasWhatsapp || s.secondary_phone_has_whatsapp || false,
-          medicalNotes: s.medicalNotes || s.medical_notes || null,
-          imagePath: s.imagePath || s.image_path || null,
-          status: s.status || "active",
-          account: s.account ?? null,
-          modules: (s.modules || []).map((m: any) => ({
-            id: m.id.toString(),
-            name: m.name,
-            category: m.category,
-            amount: Number(m.amount ?? 0),
-          })),
-          createdAt: s.createdAt || s.created_at,
-          updatedAt: s.updatedAt || s.updated_at,
-        };
-      });
+      const mappedStaffs: Staff[] = staffsRes.staffs.map((s: any) => mapApiStaffRecord(s));
 
       const mappedModules: Module[] = modulesRes.modules.map((m: any) => ({
         id: m.id.toString(),
@@ -308,7 +317,11 @@ export default function StaffsPage() {
         savedStaffId = (res as any)?.staff?.id?.toString?.() ?? selectedStaff.id;
       } else {
         const res = await staffsApi.create(payload as any);
-        savedStaffId = (res as any)?.staff?.id?.toString?.() ?? null;
+        const created = (res as any)?.staff;
+        savedStaffId = created?.id?.toString?.() ?? null;
+        if (created) {
+          setNewStaffForQr(mapApiStaffRecord(created));
+        }
       }
 
       if (isSuperAdmin() && savedStaffId && accessRoleId && accessEmail) {
@@ -322,7 +335,10 @@ export default function StaffsPage() {
       await loadData();
       closeModal();
     } catch (error: any) {
-      alert(error.message || "Failed to save staff");
+      showNotice({
+        message: error.message || "Failed to save staff",
+        variant: "error",
+      });
     }
   };
 
@@ -333,7 +349,10 @@ export default function StaffsPage() {
       await loadData();
       setDeleteTarget(null);
     } catch (error: any) {
-      alert(error.message || "Failed to delete staff");
+      showNotice({
+        message: error.message || "Failed to delete staff",
+        variant: "error",
+      });
     }
   };
 
@@ -342,8 +361,8 @@ export default function StaffsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-base-content">Staffs</h1>
-          <p className="text-base-content/70 mt-2">
+          <h1 className="text-3xl font-bold text-foreground">Staffs</h1>
+          <p className="text-muted-foreground mt-2">
             Manage staff members and their information
           </p>
         </div>
@@ -361,7 +380,7 @@ export default function StaffsPage() {
       </div>
 
       {/* Search and Filter */}
-      <div className="card bg-base-100 border border-base-300 shadow-sm">
+      <div className="card bg-card border border-border shadow-sm">
         <div className="card-body p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="form-control flex-1 min-w-0">
@@ -369,7 +388,7 @@ export default function StaffsPage() {
                 <input
                   type="text"
                   placeholder="Search staff by name, NIC, phone, or school..."
-                  className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="input input-bordered w-full border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -389,7 +408,7 @@ export default function StaffsPage() {
       </div>
 
       {/* Staffs Table */}
-      <div className="card bg-base-100 border border-base-300 shadow-md">
+      <div className="card bg-card border border-border shadow-md">
         <div className="card-body p-0">
           {loading ? (
             <div className="flex justify-center py-12">
@@ -397,11 +416,11 @@ export default function StaffsPage() {
             </div>
           ) : filteredStaffs.length === 0 ? (
             <div className="text-center py-12">
-              <UserCog className="h-16 w-16 mx-auto text-base-content/30 mb-4" />
-              <h3 className="text-xl font-semibold text-base-content mb-2">
+              <UserCog className="h-16 w-16 mx-auto text-foreground/30 mb-4" />
+              <h3 className="text-xl font-semibold text-foreground mb-2">
                 No staff found
               </h3>
-              <p className="text-base-content/70 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Create your first staff member to get started
               </p>
               <button className="btn btn-primary gap-2 items-center px-6" onClick={openCreate}>
@@ -413,13 +432,13 @@ export default function StaffsPage() {
             <div className="overflow-x-auto">
               <table className="table table-zebra w-full">
                 <thead>
-                  <tr className="bg-base-200">
-                    <th className="text-base-content font-semibold whitespace-nowrap">Staff</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap">Phone</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap">School</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap">Modules</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap">Status</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap text-right">Actions</th>
+                  <tr className="bg-muted">
+                    <th className="text-foreground font-semibold whitespace-nowrap">Staff</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">Phone</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">School</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">Modules</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">Status</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -435,7 +454,7 @@ export default function StaffsPage() {
                             </div>
                           ) : (
                             <div className="avatar placeholder flex-shrink-0">
-                              <div className="bg-primary text-primary-content rounded-full w-10 h-10 flex items-center justify-center">
+                              <div className="bg-primary text-primary-foreground rounded-full w-10 h-10 flex items-center justify-center">
                                 <span className="text-sm font-semibold">
                                   {staff.firstName?.charAt(0) || "S"}
                                   {staff.lastName?.charAt(0) || ""}
@@ -444,10 +463,10 @@ export default function StaffsPage() {
                             </div>
                           )}
                           <div className="min-w-0">
-                            <div className="font-semibold text-base-content truncate">
+                            <div className="font-semibold text-foreground truncate">
                               {staff.fullName}
                             </div>
-                            <div className="text-sm text-base-content/70 truncate">
+                            <div className="text-sm text-muted-foreground truncate">
                               {staff.nicNumber || "N/A"}
                             </div>
                           </div>
@@ -455,14 +474,14 @@ export default function StaffsPage() {
                       </td>
                       <td>
                         <div className="flex items-center gap-2 min-w-0">
-                          <Phone className="h-4 w-4 text-base-content/50 flex-shrink-0" />
-                          <span className="text-base-content truncate">{staff.secondaryPhone}</span>
+                          <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="text-foreground truncate">{staff.secondaryPhone}</span>
                           {staff.secondaryPhoneHasWhatsapp && (
                             <span className="badge badge-success badge-xs flex-shrink-0">WhatsApp</span>
                           )}
                         </div>
                       </td>
-                      <td className="text-base-content truncate max-w-[200px]">
+                      <td className="text-foreground truncate max-w-[200px]">
                         {staff.schoolName || "N/A"}
                       </td>
                       <td>
@@ -536,28 +555,26 @@ export default function StaffsPage() {
       {/* Create/Edit Modal */}
       {modalMode && modalMode !== "view" && (
         <dialog className="modal modal-open">
-          <div className="modal-box bg-base-100 border border-base-300 max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-2xl font-bold mb-6 text-base-content">
-              {modalMode === "edit" ? "Edit Staff" : "Create New Staff"}
-            </h3>
+          <div className="modal-box bg-card border border-border max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3>{modalMode === "edit" ? "Edit Staff" : "Create New Staff"}</h3>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Section 1: Personal Information */}
-              <div className="border-b border-base-300 pb-6">
-                <h4 className="text-lg font-semibold text-base-content mb-4 flex items-center gap-2">
-                  <User className="h-5 w-5 text-primary" />
+              <div className="admin-form-section">
+                <h4>
+                  <User className="h-5 w-5 shrink-0 text-primary" />
                   Personal Information
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                   {/* Profile Image - Full Width */}
                   <div className="form-control md:col-span-2">
-                    <label className="label pb-2">
-                      <span className="label-text font-semibold text-base-content">Profile Image</span>
+                    <label className="label">
+                      <span className="label-text font-semibold text-foreground">Profile Image</span>
                     </label>
                     <div className="flex items-center gap-4">
                       <input
                         type="file"
                         accept="image/*"
-                        className="file-input file-input-bordered file-input-primary flex-1 border-base-300"
+                        className="file-input file-input-bordered file-input-primary flex-1 border-border"
                         onChange={handleImageChange}
                       />
                       {imagePreview && (
@@ -576,12 +593,12 @@ export default function StaffsPage() {
 
                   {/* First Name */}
                   <div className="form-control">
-                    <label className="label pb-2">
-                      <span className="label-text font-semibold text-base-content">First Name *</span>
+                    <label className="label">
+                      <span className="label-text font-semibold text-foreground">First Name *</span>
                     </label>
                     <input
                       type="text"
-                      className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                      className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                       placeholder="Enter first name"
                       value={formData.firstName}
                       onChange={(e) =>
@@ -593,12 +610,12 @@ export default function StaffsPage() {
 
                   {/* Last Name */}
                   <div className="form-control">
-                    <label className="label pb-2">
-                      <span className="label-text font-semibold text-base-content">Last Name *</span>
+                    <label className="label">
+                      <span className="label-text font-semibold text-foreground">Last Name *</span>
                     </label>
                     <input
                       type="text"
-                      className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                      className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                       placeholder="Enter last name"
                       value={formData.lastName}
                       onChange={(e) =>
@@ -610,12 +627,12 @@ export default function StaffsPage() {
 
                   {/* Date of Birth */}
                   <div className="form-control">
-                    <label className="label pb-2">
-                      <span className="label-text font-semibold text-base-content">Date of Birth *</span>
+                    <label className="label">
+                      <span className="label-text font-semibold text-foreground">Date of Birth *</span>
                     </label>
                     <input
                       type="date"
-                      className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                      className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                       value={formData.dateOfBirth}
                       onChange={(e) =>
                         setFormData({ ...formData, dateOfBirth: e.target.value })
@@ -626,12 +643,12 @@ export default function StaffsPage() {
 
                   {/* NIC Number */}
                   <div className="form-control">
-                    <label className="label pb-2">
-                      <span className="label-text font-semibold text-base-content">NIC Number</span>
+                    <label className="label">
+                      <span className="label-text font-semibold text-foreground">NIC Number</span>
                     </label>
                     <input
                       type="text"
-                      className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                      className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                       placeholder="Enter NIC number"
                       value={formData.nicNumber}
                       onChange={(e) =>
@@ -642,11 +659,11 @@ export default function StaffsPage() {
 
                   {/* Gender */}
                   <div className="form-control">
-                    <label className="label pb-2">
-                      <span className="label-text font-semibold text-base-content">Gender *</span>
+                    <label className="label">
+                      <span className="label-text font-semibold text-foreground">Gender *</span>
                     </label>
                     <select
-                      className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                      className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                       value={formData.gender}
                       onChange={(e) =>
                         setFormData({ ...formData, gender: e.target.value as Gender })
@@ -663,11 +680,11 @@ export default function StaffsPage() {
 
                   {/* Blood Group */}
                   <div className="form-control">
-                    <label className="label pb-2">
-                      <span className="label-text font-semibold text-base-content">Blood Group</span>
+                    <label className="label">
+                      <span className="label-text font-semibold text-foreground">Blood Group</span>
                     </label>
                     <select
-                      className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                      className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                       value={formData.bloodGroup}
                       onChange={(e) =>
                         setFormData({ ...formData, bloodGroup: e.target.value })
@@ -684,11 +701,11 @@ export default function StaffsPage() {
 
                   {/* Address - Full Width */}
                   <div className="form-control md:col-span-2">
-                    <label className="label pb-2">
-                      <span className="label-text font-semibold text-base-content">Address *</span>
+                    <label className="label">
+                      <span className="label-text font-semibold text-foreground">Address *</span>
                     </label>
                     <textarea
-                      className="textarea textarea-bordered w-full h-24 border-base-300 focus:border-primary focus:outline-none"
+                      className="textarea textarea-bordered w-full h-24 border-border focus:border-primary focus:outline-none"
                       placeholder="Enter full address"
                       value={formData.address}
                       onChange={(e) =>
@@ -700,12 +717,12 @@ export default function StaffsPage() {
 
                   {/* School Name - Full Width */}
                   <div className="form-control md:col-span-2">
-                    <label className="label pb-2">
-                      <span className="label-text font-semibold text-base-content">School Name</span>
+                    <label className="label">
+                      <span className="label-text font-semibold text-foreground">School Name</span>
                     </label>
                     <input
                       type="text"
-                      className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                      className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                       placeholder="Enter school name"
                       value={formData.schoolName}
                       onChange={(e) =>
@@ -716,11 +733,11 @@ export default function StaffsPage() {
 
                   {/* Qualifications - Full Width */}
                   <div className="form-control md:col-span-2">
-                    <label className="label pb-2">
-                      <span className="label-text font-semibold text-base-content">Qualifications</span>
+                    <label className="label">
+                      <span className="label-text font-semibold text-foreground">Qualifications</span>
                     </label>
                     <textarea
-                      className="textarea textarea-bordered w-full h-32 border-base-300 focus:border-primary focus:outline-none"
+                      className="textarea textarea-bordered w-full h-32 border-border focus:border-primary focus:outline-none"
                       placeholder="Enter qualifications (e.g., B.Sc. in Computer Science, M.Sc. in Mathematics)"
                       value={formData.qualifications}
                       onChange={(e) =>
@@ -731,13 +748,13 @@ export default function StaffsPage() {
 
                   {/* Secondary Phone with WhatsApp */}
                   <div className="form-control md:col-span-2">
-                    <label className="label pb-2">
-                      <span className="label-text font-semibold text-base-content">Secondary Phone *</span>
+                    <label className="label">
+                      <span className="label-text font-semibold text-foreground">Secondary Phone *</span>
                     </label>
                     <div className="join w-full">
                       <input
                         type="tel"
-                        className="input input-bordered join-item flex-1 border-base-300 focus:border-primary focus:outline-none"
+                        className="input input-bordered join-item flex-1 border-border focus:border-primary focus:outline-none"
                         placeholder="Enter phone number"
                         value={formData.secondaryPhone}
                         onChange={(e) =>
@@ -765,9 +782,9 @@ export default function StaffsPage() {
               </div>
 
               {/* Section 2: Module Information */}
-              <div className="border-b border-base-300 pb-6">
-                <h4 className="text-lg font-semibold text-base-content mb-4 flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-primary" />
+              <div className="admin-form-section">
+                <h4>
+                  <BookOpen className="h-5 w-5 shrink-0 text-primary" />
                   Module Assignment (Multiple Selection)
                 </h4>
                 <div className="form-control">
@@ -777,14 +794,14 @@ export default function StaffsPage() {
                     </div>
                   ) : (
                     <>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-h-64 overflow-y-auto p-4 border border-base-300 rounded-lg bg-base-50">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-h-64 overflow-y-auto p-4 border border-border rounded-lg bg-base-50">
                         {modules.map((module) => (
                           <label
                             key={module.id}
                             className={`label cursor-pointer justify-start gap-3 p-4 rounded-lg border transition-all ${
                               formData.moduleIds.includes(module.id)
                                 ? "border-primary bg-primary/10"
-                                : "border-base-300 hover:bg-base-200 hover:border-base-400"
+                                : "border-border hover:bg-muted hover:border-base-400"
                             }`}
                           >
                             <input
@@ -814,7 +831,7 @@ export default function StaffsPage() {
                         ))}
                       </div>
                       <label className="label mt-3">
-                        <span className="label-text font-medium text-base-content">
+                        <span className="label-text font-medium text-foreground">
                           Selected: <span className="text-primary font-bold">{formData.moduleIds.length}</span> modules
                         </span>
                       </label>
@@ -824,18 +841,18 @@ export default function StaffsPage() {
               </div>
 
               {isSuperAdmin() ? (
-                <div className="border-b border-base-300 pb-6">
-                  <h4 className="text-lg font-semibold text-base-content mb-4 flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-primary" />
+                <div className="admin-form-section">
+                  <h4>
+                    <Shield className="h-5 w-5 shrink-0 text-primary" />
                     Staff access (Role & login)
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                     <div className="form-control">
-                      <label className="label pb-2">
-                        <span className="label-text font-semibold text-base-content">Role</span>
+                      <label className="label">
+                        <span className="label-text font-semibold text-foreground">Role</span>
                       </label>
                       <select
-                        className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                        className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                         value={accessRoleId}
                         onChange={(e) => setAccessRoleId(e.target.value)}
                       >
@@ -847,19 +864,19 @@ export default function StaffsPage() {
                         ))}
                       </select>
                       <label className="label pt-2">
-                        <span className="label-text-alt text-base-content/60">
+                        <span className="label-text-alt text-muted-foreground">
                           Only Super Admin can assign roles to staff.
                         </span>
                       </label>
                     </div>
 
                     <div className="form-control">
-                      <label className="label pb-2">
-                        <span className="label-text font-semibold text-base-content">Login email</span>
+                      <label className="label">
+                        <span className="label-text font-semibold text-foreground">Login email</span>
                       </label>
                       <input
                         type="email"
-                        className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                        className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                         placeholder="staff@example.com"
                         value={accessEmail}
                         onChange={(e) => setAccessEmail(e.target.value)}
@@ -868,14 +885,14 @@ export default function StaffsPage() {
                     </div>
 
                     <div className="form-control md:col-span-2">
-                      <label className="label pb-2">
-                        <span className="label-text font-semibold text-base-content">
+                      <label className="label">
+                        <span className="label-text font-semibold text-foreground">
                           {modalMode === "create" ? "Set password" : "Reset password (optional)"}
                         </span>
                       </label>
                       <input
                         type="password"
-                        className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                        className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                         placeholder={modalMode === "create" ? "Minimum 8 characters" : "Leave empty to keep current"}
                         value={accessPassword}
                         onChange={(e) => setAccessPassword(e.target.value)}
@@ -887,19 +904,19 @@ export default function StaffsPage() {
               ) : null}
 
               {/* Section 3: Additional Information */}
-              <div>
-                <h4 className="text-lg font-semibold text-base-content mb-4 flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
+              <div className="admin-form-section">
+                <h4>
+                  <FileText className="h-5 w-5 shrink-0 text-primary" />
                   Additional Information
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                   {/* Medical Notes - Full Width */}
                   <div className="form-control md:col-span-2">
-                    <label className="label pb-2">
-                      <span className="label-text font-semibold text-base-content">Medical Notes</span>
+                    <label className="label">
+                      <span className="label-text font-semibold text-foreground">Medical Notes</span>
                     </label>
                     <textarea
-                      className="textarea textarea-bordered w-full h-24 border-base-300 focus:border-primary focus:outline-none"
+                      className="textarea textarea-bordered w-full h-24 border-border focus:border-primary focus:outline-none"
                       value={formData.medicalNotes}
                       onChange={(e) =>
                         setFormData({ ...formData, medicalNotes: e.target.value })
@@ -910,11 +927,11 @@ export default function StaffsPage() {
 
                   {/* Status */}
                   <div className="form-control">
-                    <label className="label pb-2">
-                      <span className="label-text font-semibold text-base-content">Status *</span>
+                    <label className="label">
+                      <span className="label-text font-semibold text-foreground">Status *</span>
                     </label>
                     <select
-                      className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                      className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                       value={formData.status}
                       onChange={(e) =>
                         setFormData({
@@ -934,7 +951,7 @@ export default function StaffsPage() {
                 </div>
               </div>
 
-              <div className="modal-action flex justify-end gap-3 mt-8">
+              <div className="modal-action">
                 <button
                   type="button"
                   className="btn btn-ghost gap-2 px-6"
@@ -983,59 +1000,77 @@ export default function StaffsPage() {
       >
         {selectedStaff && (
           <div className="space-y-4">
-            <div className="flex gap-3 border-b border-base-200 pb-3">
+            <div className="flex gap-3 border-b border-border pb-3">
               {selectedStaff.imagePath ? (
                 <div className="avatar shrink-0">
-                  <div className="w-14 rounded-full ring ring-base-200 ring-offset-2 ring-offset-base-100">
+                  <div className="w-14 rounded-full ring ring-border ring-offset-2 ring-offset-background">
                     <img src={selectedStaff.imagePath} alt="" />
                   </div>
                 </div>
               ) : (
                 <div className="avatar placeholder shrink-0">
-                  <div className="w-14 rounded-full bg-primary text-primary-content text-sm font-semibold">
+                  <div className="w-14 rounded-full bg-primary text-primary-foreground text-sm font-semibold">
                     {selectedStaff.firstName?.charAt(0) || "S"}
                     {selectedStaff.lastName?.charAt(0) || ""}
                   </div>
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-base font-semibold leading-tight text-base-content">{selectedStaff.fullName}</p>
+                <p className="text-base font-semibold leading-tight text-foreground">{selectedStaff.fullName}</p>
                 <div className="mt-1.5">
                   <span className={`badge badge-sm ${getStatusBadge(selectedStaff.status)}`}>
                     {selectedStaff.status}
                   </span>
                 </div>
+                {selectedStaff.barcode ? (
+                  <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Barcode className="h-3.5 w-3.5 shrink-0" />
+                    <span className="font-mono">{selectedStaff.barcode}</span>
+                  </div>
+                ) : null}
               </div>
             </div>
+
+            {selectedStaff.barcode ? (
+              <StaffAttendanceQr
+                compact
+                showDescription={false}
+                barcode={selectedStaff.barcode}
+                fullName={selectedStaff.fullName}
+                subtitle={`ID: ${selectedStaff.barcode}`}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">No attendance ID on file for this staff member.</p>
+            )}
 
             <div>
               <RecordDetailSectionTitle>Personal</RecordDetailSectionTitle>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-3">
                 <div>
-                  <p className="text-xs text-base-content/60">Date of birth</p>
-                  <p className="text-sm font-medium text-base-content">
+                  <p className="text-xs text-muted-foreground">Date of birth</p>
+                  <p className="text-sm font-medium text-foreground">
                     {new Date(selectedStaff.dateOfBirth).toLocaleDateString()}
                   </p>
                 </div>
                 {selectedStaff.nicNumber ? (
                   <div>
-                    <p className="text-xs text-base-content/60">NIC</p>
-                    <p className="text-sm font-medium text-base-content">{selectedStaff.nicNumber}</p>
+                    <p className="text-xs text-muted-foreground">NIC</p>
+                    <p className="text-sm font-medium text-foreground">{selectedStaff.nicNumber}</p>
                   </div>
                 ) : null}
                 <div>
-                  <p className="text-xs text-base-content/60">Gender</p>
-                  <p className="text-sm font-medium capitalize text-base-content">{selectedStaff.gender}</p>
+                  <p className="text-xs text-muted-foreground">Gender</p>
+                  <p className="text-sm font-medium capitalize text-foreground">{selectedStaff.gender}</p>
                 </div>
                 {selectedStaff.bloodGroup ? (
                   <div>
-                    <p className="text-xs text-base-content/60">Blood group</p>
-                    <p className="text-sm font-medium text-base-content">{selectedStaff.bloodGroup}</p>
+                    <p className="text-xs text-muted-foreground">Blood group</p>
+                    <p className="text-sm font-medium text-foreground">{selectedStaff.bloodGroup}</p>
                   </div>
                 ) : null}
                 <div className="sm:col-span-2">
-                  <p className="text-xs text-base-content/60">Secondary phone</p>
-                  <p className="text-sm font-medium text-base-content flex flex-wrap items-center gap-1.5">
+                  <p className="text-xs text-muted-foreground">Secondary phone</p>
+                  <p className="text-sm font-medium text-foreground flex flex-wrap items-center gap-1.5">
                     {selectedStaff.secondaryPhone}
                     {selectedStaff.secondaryPhoneHasWhatsapp ? (
                       <span className="badge badge-success badge-xs">WA</span>
@@ -1043,27 +1078,27 @@ export default function StaffsPage() {
                   </p>
                 </div>
                 <div className="sm:col-span-2">
-                  <p className="text-xs text-base-content/60">Address</p>
-                  <p className="text-sm font-medium text-base-content leading-snug">{selectedStaff.address}</p>
+                  <p className="text-xs text-muted-foreground">Address</p>
+                  <p className="text-sm font-medium text-foreground leading-snug">{selectedStaff.address}</p>
                 </div>
                 {selectedStaff.schoolName ? (
                   <div className="sm:col-span-2">
-                    <p className="text-xs text-base-content/60">School</p>
-                    <p className="text-sm font-medium text-base-content">{selectedStaff.schoolName}</p>
+                    <p className="text-xs text-muted-foreground">School</p>
+                    <p className="text-sm font-medium text-foreground">{selectedStaff.schoolName}</p>
                   </div>
                 ) : null}
                 {selectedStaff.qualifications ? (
                   <div className="sm:col-span-2">
-                    <p className="text-xs text-base-content/60">Qualifications</p>
-                    <p className="text-sm font-medium text-base-content leading-snug">
+                    <p className="text-xs text-muted-foreground">Qualifications</p>
+                    <p className="text-sm font-medium text-foreground leading-snug">
                       {selectedStaff.qualifications}
                     </p>
                   </div>
                 ) : null}
                 {selectedStaff.medicalNotes ? (
                   <div className="sm:col-span-2">
-                    <p className="text-xs text-base-content/60">Medical notes</p>
-                    <p className="text-sm font-medium text-base-content leading-snug">
+                    <p className="text-xs text-muted-foreground">Medical notes</p>
+                    <p className="text-sm font-medium text-foreground leading-snug">
                       {selectedStaff.medicalNotes}
                     </p>
                   </div>
@@ -1075,7 +1110,7 @@ export default function StaffsPage() {
               <RecordDetailSectionTitle>Modules</RecordDetailSectionTitle>
               <div className="flex flex-wrap gap-1.5">
                 {selectedStaff.modules.length === 0 ? (
-                  <span className="text-sm text-base-content/50">None assigned</span>
+                  <span className="text-sm text-muted-foreground">None assigned</span>
                 ) : (
                   selectedStaff.modules.map((module) => (
                     <span key={module.id} className="badge badge-primary badge-sm">
@@ -1089,12 +1124,36 @@ export default function StaffsPage() {
         )}
       </RecordDetailModal>
 
+      <Dialog open={!!newStaffForQr} onOpenChange={(o) => !o && setNewStaffForQr(null)}>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Staff created</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This QR is unique to this staff member and does not change. Download the PNG for an ID card or gate
+            check-in.
+          </p>
+          {newStaffForQr?.barcode ? (
+            <StaffAttendanceQr
+              barcode={newStaffForQr.barcode}
+              fullName={newStaffForQr.fullName}
+              subtitle={newStaffForQr.nicNumber ? `NIC: ${newStaffForQr.nicNumber}` : undefined}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No attendance ID was returned. Open the staff profile after refresh to generate or view the ID if
+              available.
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog
         open={!!deleteTarget}
         title="Delete staff?"
         description={
           <>
-            Remove <span className="font-medium text-base-content">{deleteTarget?.fullName}</span>.
+            Remove <span className="font-medium text-foreground">{deleteTarget?.fullName}</span>.
             This cannot be undone.
           </>
         }

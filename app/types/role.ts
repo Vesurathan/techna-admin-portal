@@ -7,8 +7,10 @@ export type Permission =
   | "timetables"
   | "questionbank"
   | "payments"
+  | "salary_payroll"
   | "reports"
-  | "role";
+  | "role"
+  | "photo_library";
 
 export interface Role {
   id: string;

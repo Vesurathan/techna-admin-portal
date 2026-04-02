@@ -1,82 +1,84 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: ["class"],
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        card: {
+          DEFAULT: "var(--card)",
+          foreground: "var(--card-foreground)",
+        },
+        popover: {
+          DEFAULT: "var(--popover)",
+          foreground: "var(--popover-foreground)",
+        },
+        primary: {
+          DEFAULT: "var(--primary)",
+          foreground: "var(--primary-foreground)",
+        },
+        secondary: {
+          DEFAULT: "var(--secondary)",
+          foreground: "var(--secondary-foreground)",
+        },
+        muted: {
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
+        },
+        accent: {
+          DEFAULT: "var(--accent)",
+          foreground: "var(--accent-foreground)",
+        },
+        destructive: "var(--destructive)",
+        success: "#10b981",
+        warning: "#f59e0b",
+        border: "var(--border)",
+        input: "var(--input)",
+        ring: "var(--ring)",
+        chart: {
+          1: "var(--chart-1)",
+          2: "var(--chart-2)",
+          3: "var(--chart-3)",
+          4: "var(--chart-4)",
+          5: "var(--chart-5)",
+        },
+        sidebar: {
+          DEFAULT: "var(--sidebar)",
+          foreground: "var(--sidebar-foreground)",
+          primary: "var(--sidebar-primary)",
+          "primary-foreground": "var(--sidebar-primary-foreground)",
+          accent: "var(--sidebar-accent)",
+          "accent-foreground": "var(--sidebar-accent-foreground)",
+          border: "var(--sidebar-border)",
+          ring: "var(--sidebar-ring)",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+        xl: "calc(var(--radius) + 4px)",
+      },
+      fontFamily: {
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        heading: ["var(--font-heading)", "var(--font-sans)", "ui-sans-serif", "system-ui"],
+      },
+    },
   },
-  plugins: [require("daisyui").default || require("daisyui")],
-  safelist: [
-    // DaisyUI component classes - use patterns to ensure they're not purged
-    { pattern: /btn/ },
-    { pattern: /btn-primary/ },
-    { pattern: /btn-outline/ },
-    { pattern: /card/ },
-    { pattern: /badge/ },
-    { pattern: /modal/ },
-    { pattern: /dropdown/ },
-    { pattern: /loading/ },
-    { pattern: /alert/ },
-    { pattern: /form-control/ },
-    { pattern: /label/ },
-    { pattern: /input/ },
-    { pattern: /select/ },
-    { pattern: /table/ },
-    { pattern: /avatar/ },
-    { pattern: /menu/ },
-    // Base colors
-    { pattern: /bg-base-(100|200|300)/ },
-    { pattern: /text-base-content/ },
-    { pattern: /border-base-(100|200|300)/ },
+  plugins: [
+    require("tailwindcss-animate"),
+    function ({ addVariant }) {
+      addVariant("data-open", '&:where([data-state="open"]):not([data-state="closed"]),&:where([data-open]:not([data-open="false"]))');
+      addVariant(
+        "data-closed",
+        '&:where([data-state="closed"]):not([data-state="open"]),&:where([data-closed]:not([data-closed="false"]))'
+      );
+    },
   ],
-  daisyui: {
-    themes: [
-      {
-        light: {
-          primary: "#432AD5",
-          secondary: "#432AD5",
-          accent: "#432AD5",
-          neutral: "#3d4451",
-          "base-100": "#ffffff",
-          "base-200": "#f5f5f5",
-          "base-300": "#e5e5e5",
-          info: "#432AD5",
-          success: "#10b981",
-          warning: "#f59e0b",
-          error: "#ef4444",
-          "--rounded-box": "0.5rem",
-          "--rounded-btn": "0.5rem",
-          "--rounded-badge": "1.9rem",
-        },
-      },
-      {
-        dark: {
-          primary: "#432AD5",
-          secondary: "#432AD5",
-          accent: "#432AD5",
-          neutral: "#1a1a1a",
-          "base-100": "#1a1a1a",
-          "base-200": "#2a2a2a",
-          "base-300": "#3a3a3a",
-          info: "#432AD5",
-          success: "#10b981",
-          warning: "#f59e0b",
-          error: "#ef4444",
-          "--rounded-box": "0.5rem",
-          "--rounded-btn": "0.5rem",
-          "--rounded-badge": "1.9rem",
-        },
-      },
-    ],
-    darkTheme: "dark",
-    base: true,
-    styled: true,
-    utils: true,
-    prefix: "",
-    logs: true,
-    themeRoot: "html",
-  },
 };

@@ -16,6 +16,8 @@ export type BloodGroup = typeof bloodGroups[number];
 
 export interface Staff {
   id: string;
+  /** Permanent attendance / gate scan ID (set at creation). */
+  barcode?: string | null;
   firstName: string;
   lastName: string;
   fullName: string;

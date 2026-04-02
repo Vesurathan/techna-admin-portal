@@ -317,7 +317,7 @@ export default function DashboardPage() {
         title: "Revenue (selected range)",
         value: formatCurrency(kpis.rangeRevenue),
         icon: DollarSign,
-        tone: "bg-warning/10 text-warning",
+        tone: "bg-warning/10 text-amber-600 dark:text-amber-400",
         href: "/admin/payments",
       },
     ] as const;
@@ -349,8 +349,8 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-3xl font-bold text-base-content">Dashboard</h1>
-          <p className="text-base-content/70 mt-2">
+          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground mt-2">
             Operational overview across students, staff, modules, payments, and attendance.
           </p>
         </div>
@@ -372,13 +372,13 @@ export default function DashboardPage() {
       </div>
 
       {/* Payment date range */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-bold text-base-content">Payment date range</h2>
+            <h2 className="text-sm font-bold text-foreground">Payment date range</h2>
           </div>
-          <p className="text-xs text-base-content/70 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             KPIs and charts update based on the selected payment date range.
           </p>
         </div>
@@ -386,10 +386,10 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
           <div className="form-control sm:w-56">
             <label className="label pb-1">
-              <span className="label-text text-xs font-semibold text-base-content/70">Preset</span>
+              <span className="label-text text-xs font-semibold text-muted-foreground">Preset</span>
             </label>
             <select
-              className="select select-bordered border-base-300"
+              className="select select-bordered border-border"
               value={datePreset}
               onChange={(e) => {
                 const preset = e.target.value as DatePreset;
@@ -414,11 +414,11 @@ export default function DashboardPage() {
 
           <div className="form-control sm:w-44">
             <label className="label pb-1">
-              <span className="label-text text-xs font-semibold text-base-content/70">From</span>
+              <span className="label-text text-xs font-semibold text-muted-foreground">From</span>
             </label>
             <input
               type="date"
-              className="input input-bordered border-base-300"
+              className="input input-bordered border-border"
               value={dateFrom}
               onChange={(e) => {
                 setDatePreset("custom");
@@ -430,11 +430,11 @@ export default function DashboardPage() {
 
           <div className="form-control sm:w-44">
             <label className="label pb-1">
-              <span className="label-text text-xs font-semibold text-base-content/70">To</span>
+              <span className="label-text text-xs font-semibold text-muted-foreground">To</span>
             </label>
             <input
               type="date"
-              className="input input-bordered border-base-300"
+              className="input input-bordered border-border"
               value={dateTo}
               onChange={(e) => {
                 setDatePreset("custom");
@@ -456,7 +456,7 @@ export default function DashboardPage() {
       </div>
 
       {errorMessage && (
-        <div className="alert alert-warning border border-base-300">
+        <div className="alert alert-warning border border-border">
           <AlertTriangle className="h-5 w-5" />
           <span className="text-sm">{errorMessage}</span>
         </div>
@@ -470,13 +470,13 @@ export default function DashboardPage() {
             <Link
               key={card.title}
               href={card.href}
-              className="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-shadow"
+              className="card bg-card border border-border shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="card-body p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-base-content/70">{card.title}</p>
-                    <p className="mt-1 text-3xl font-bold text-base-content">
+                    <p className="text-sm font-medium text-muted-foreground">{card.title}</p>
+                    <p className="mt-1 text-3xl font-bold text-foreground">
                       {loading ? "—" : card.value}
                     </p>
                   </div>
@@ -484,7 +484,7 @@ export default function DashboardPage() {
                     <Icon className="h-6 w-6" />
                   </div>
                 </div>
-                <div className="mt-4 flex items-center justify-between text-sm text-base-content/70">
+                <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
                   <span>Open</span>
                   <ArrowUpRight className="h-4 w-4" />
                 </div>
@@ -496,12 +496,12 @@ export default function DashboardPage() {
 
       {/* Charts row */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 card bg-base-100 border border-base-300 shadow-sm">
+        <div className="lg:col-span-2 card bg-card border border-border shadow-sm">
           <div className="card-body p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="text-lg font-bold text-base-content">Revenue trend</h2>
-                <p className="text-sm text-base-content/70">
+                <h2 className="text-lg font-bold text-foreground">Revenue trend</h2>
+                <p className="text-sm text-muted-foreground">
                   {dateFrom} → {dateTo}
                 </p>
               </div>
@@ -547,12 +547,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="card bg-base-100 border border-base-300 shadow-sm">
+        <div className="card bg-card border border-border shadow-sm">
           <div className="card-body p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-base-content">Payment status mix</h2>
-                <p className="text-sm text-base-content/70">
+                <h2 className="text-lg font-bold text-foreground">Payment status mix</h2>
+                <p className="text-sm text-muted-foreground">
                   {dateFrom} → {dateTo}
                 </p>
               </div>
@@ -564,7 +564,7 @@ export default function DashboardPage() {
 
             <div className="mt-4 h-56">
               {paymentStatusData.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-sm text-base-content/60">
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                   No payment status data yet.
                 </div>
               ) : (
@@ -590,30 +590,30 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-2 grid grid-cols-3 gap-3">
-              <div className="rounded-xl border border-base-300 p-3">
-                <div className="flex items-center gap-2 text-sm text-base-content/70">
+              <div className="rounded-xl border border-border p-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CreditCard className="h-4 w-4 text-success" />
                   Paid
                 </div>
-                <div className="mt-1 text-xl font-bold text-base-content">
+                <div className="mt-1 text-xl font-bold text-foreground">
                   {loading ? "—" : formatCompactNumber(kpis.rangePaidCount)}
                 </div>
               </div>
-              <div className="rounded-xl border border-base-300 p-3">
-                <div className="flex items-center gap-2 text-sm text-base-content/70">
-                  <Receipt className="h-4 w-4 text-warning" />
+              <div className="rounded-xl border border-border p-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Receipt className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                   Pending
                 </div>
-                <div className="mt-1 text-xl font-bold text-base-content">
+                <div className="mt-1 text-xl font-bold text-foreground">
                   {loading ? "—" : formatCompactNumber(kpis.rangePendingCount)}
                 </div>
               </div>
-              <div className="rounded-xl border border-base-300 p-3">
-                <div className="flex items-center gap-2 text-sm text-base-content/70">
-                  <Receipt className="h-4 w-4 text-error" />
+              <div className="rounded-xl border border-border p-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Receipt className="h-4 w-4 text-destructive" />
                   Partial
                 </div>
-                <div className="mt-1 text-xl font-bold text-base-content">
+                <div className="mt-1 text-xl font-bold text-foreground">
                   {loading ? "—" : formatCompactNumber(kpis.rangePartialCount)}
                 </div>
               </div>
@@ -624,15 +624,15 @@ export default function DashboardPage() {
 
       {/* Operational widgets */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="card bg-base-100 border border-base-300 shadow-sm lg:col-span-2">
+        <div className="card bg-card border border-border shadow-sm lg:col-span-2">
           <div className="card-body p-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-base-content">Payments volume</h2>
+              <h2 className="text-lg font-bold text-foreground">Payments volume</h2>
               <Link href="/admin/payments" className="btn btn-ghost btn-sm">
                 View
               </Link>
             </div>
-            <p className="text-sm text-base-content/70">Paid vs pending vs partial counts by period</p>
+            <p className="text-sm text-muted-foreground">Paid vs pending vs partial counts by period</p>
             <div className="mt-4 h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={series}>
@@ -650,10 +650,10 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="card bg-base-100 border border-base-300 shadow-sm">
+        <div className="card bg-card border border-border shadow-sm">
           <div className="card-body p-5">
-            <h2 className="text-lg font-bold text-base-content">Quick actions</h2>
-            <p className="text-sm text-base-content/70">Common admin tasks</p>
+            <h2 className="text-lg font-bold text-foreground">Quick actions</h2>
+            <p className="text-sm text-muted-foreground">Common admin tasks</p>
 
             <div className="mt-4 grid grid-cols-1 gap-2">
               <Link href="/admin/students" className="btn btn-outline justify-between">

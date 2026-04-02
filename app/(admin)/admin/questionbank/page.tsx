@@ -28,6 +28,7 @@ import Pagination from "@/app/components/Pagination";
 import { IconTab, IconTabs } from "@/app/components/IconTabs";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
 import { RecordDetailModal, RecordDetailSectionTitle } from "@/app/components/RecordDetailModal";
+import { useAppNotice } from "@/app/contexts/AppNoticeContext";
 
 type ModalMode = "create" | "edit" | "view" | null;
 type TabType = "module" | "general" | "questionnaire";
@@ -64,6 +65,7 @@ interface Questionnaire {
 }
 
 export default function QuestionBankPage() {
+  const { showNotice } = useAppNotice();
   const [activeTab, setActiveTab] = useState<TabType>("module");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
@@ -443,17 +445,29 @@ export default function QuestionBankPage() {
 
     // Validation
     if (!formData.question_text.trim()) {
-      alert("Please enter a question");
+      showNotice({
+        title: "Question required",
+        message: "Please enter a question",
+        variant: "info",
+      });
       return;
     }
 
     if (!formData.category.trim() && !newCategory.trim()) {
-      alert("Please enter or select a category");
+      showNotice({
+        title: "Category required",
+        message: "Please enter or select a category",
+        variant: "info",
+      });
       return;
     }
 
     if (formData.source === "module" && !formData.module_id) {
-      alert("Please select a module");
+      showNotice({
+        title: "Module required",
+        message: "Please select a module",
+        variant: "info",
+      });
       return;
     }
 
@@ -462,26 +476,42 @@ export default function QuestionBankPage() {
     // Validate based on question type
     if (formData.question_type === "single_select" || formData.question_type === "multi_select" || formData.question_type === "true_false") {
       if (formData.options.length < 2) {
-        alert("Please add at least 2 options");
+        showNotice({
+          title: "Options required",
+          message: "Please add at least 2 options",
+          variant: "info",
+        });
         return;
       }
 
       const hasCorrect = formData.options.some((opt) => opt.is_correct);
       if (!hasCorrect) {
-        alert("Please mark at least one option as correct");
+        showNotice({
+          title: "Correct answer required",
+          message: "Please mark at least one option as correct",
+          variant: "info",
+        });
         return;
       }
 
       if (formData.question_type === "single_select") {
         const correctCount = formData.options.filter((opt) => opt.is_correct).length;
         if (correctCount !== 1) {
-          alert("Single select questions must have exactly one correct answer");
+          showNotice({
+            title: "Invalid options",
+            message: "Single select questions must have exactly one correct answer",
+            variant: "info",
+          });
           return;
         }
       }
     } else if (formData.question_type === "short_answer" || formData.question_type === "long_answer") {
       if (!formData.correct_answer?.trim()) {
-        alert("Please provide a correct answer");
+        showNotice({
+          title: "Answer required",
+          message: "Please provide a correct answer",
+          variant: "info",
+        });
         return;
       }
     }
@@ -526,7 +556,10 @@ export default function QuestionBankPage() {
       await loadData();
       closeModal();
     } catch (error: any) {
-      alert(error.message || "Failed to save question");
+      showNotice({
+        message: error.message || "Failed to save question",
+        variant: "error",
+      });
     }
   };
 
@@ -537,7 +570,10 @@ export default function QuestionBankPage() {
       await loadData();
       setDeleteTarget(null);
     } catch (error: any) {
-      alert(error.message || "Failed to delete question");
+      showNotice({
+        message: error.message || "Failed to delete question",
+        variant: "error",
+      });
     }
   };
 
@@ -581,22 +617,38 @@ export default function QuestionBankPage() {
     e.preventDefault();
 
     if (!questionnaireFormData.title.trim()) {
-      alert("Please enter a title for the questionnaire");
+      showNotice({
+        title: "Title required",
+        message: "Please enter a title for the questionnaire",
+        variant: "info",
+      });
       return;
     }
 
     if (!questionnaireFormData.batch.trim()) {
-      alert("Please enter a batch");
+      showNotice({
+        title: "Batch required",
+        message: "Please enter a batch",
+        variant: "info",
+      });
       return;
     }
 
     if (questionnaireFormData.source === "module" && !questionnaireFormData.module_id) {
-      alert("Please select a module");
+      showNotice({
+        title: "Module required",
+        message: "Please select a module",
+        variant: "info",
+      });
       return;
     }
 
     if (questionnaireFormData.selected_categories.length === 0) {
-      alert("Please select at least one category");
+      showNotice({
+        title: "Categories required",
+        message: "Please select at least one category",
+        variant: "info",
+      });
       return;
     }
 
@@ -606,7 +658,11 @@ export default function QuestionBankPage() {
     );
 
     if (totalQuestions === 0) {
-      alert("Please specify at least one question for any question type");
+      showNotice({
+        title: "Question counts required",
+        message: "Please specify at least one question for any question type",
+        variant: "info",
+      });
       return;
     }
 
@@ -624,7 +680,10 @@ export default function QuestionBankPage() {
       await loadQuestionnaireData();
       closeQuestionnaireModal();
     } catch (error: any) {
-      alert(error.message || "Failed to generate questionnaire");
+      showNotice({
+        message: error.message || "Failed to generate questionnaire",
+        variant: "error",
+      });
     }
   };
 
@@ -762,7 +821,10 @@ export default function QuestionBankPage() {
       // Convert canvas to blob and download
       canvas.toBlob((blob) => {
         if (!blob) {
-          alert('Failed to generate image');
+          showNotice({
+            message: "Failed to generate image",
+            variant: "error",
+          });
           return;
         }
 
@@ -777,7 +839,10 @@ export default function QuestionBankPage() {
       }, 'image/png');
     } catch (error: any) {
       console.error('Download error:', error);
-      alert(error.message || 'Failed to download questionnaire');
+      showNotice({
+        message: error.message || "Failed to download questionnaire",
+        variant: "error",
+      });
     }
   };
 
@@ -788,7 +853,10 @@ export default function QuestionBankPage() {
       await loadQuestionnaireData();
       setDeleteQuestionnaireTarget(null);
     } catch (error: any) {
-      alert(error.message || "Failed to delete questionnaire");
+      showNotice({
+        message: error.message || "Failed to delete questionnaire",
+        variant: "error",
+      });
     }
   };
 
@@ -797,8 +865,8 @@ export default function QuestionBankPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-base-content">Question Bank</h1>
-          <p className="text-base-content/70 mt-2">
+          <h1 className="text-3xl font-bold text-foreground">Question Bank</h1>
+          <p className="text-muted-foreground mt-2">
             Manage examination questions and question banks
           </p>
         </div>
@@ -865,7 +933,7 @@ export default function QuestionBankPage() {
 
       {/* Search and Filter */}
       {activeTab !== "questionnaire" && (
-        <div className="card bg-base-100 border border-base-300 shadow-sm">
+        <div className="card bg-card border border-border shadow-sm">
           <div className="card-body p-4 sm:p-5">
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="form-control flex-1 min-w-0">
@@ -873,7 +941,7 @@ export default function QuestionBankPage() {
                   <input
                     type="text"
                     placeholder="Search questions..."
-                    className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="input input-bordered w-full border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
@@ -885,7 +953,7 @@ export default function QuestionBankPage() {
               {activeTab === "module" && (
                 <div className="form-control flex-shrink-0 sm:w-48">
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={filterModule}
                     onChange={(e) => setFilterModule(e.target.value)}
                   >
@@ -900,7 +968,7 @@ export default function QuestionBankPage() {
               )}
               <div className="form-control flex-shrink-0 sm:w-48">
                 <select
-                  className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                  className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
                 >
@@ -914,7 +982,7 @@ export default function QuestionBankPage() {
               </div>
               <div className="form-control flex-shrink-0 sm:w-48">
                 <select
-                  className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                  className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
                 >
@@ -933,10 +1001,10 @@ export default function QuestionBankPage() {
 
       {/* Questionnaire Filter */}
       {activeTab === "questionnaire" && (
-        <div className="card bg-base-100 border border-base-300 shadow-sm">
+        <div className="card bg-card border border-border shadow-sm">
           <div className="card-body p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-base-content">Filters</h3>
+              <h3 className="text-lg font-semibold text-foreground">Filters</h3>
               <button
                 className="btn btn-outline btn-sm gap-2 items-center"
                 onClick={() => {
@@ -954,7 +1022,7 @@ export default function QuestionBankPage() {
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="form-control flex-shrink-0 sm:w-48">
                 <select
-                  className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                  className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                   value={filterModule}
                   onChange={(e) => setFilterModule(e.target.value)}
                 >
@@ -973,7 +1041,7 @@ export default function QuestionBankPage() {
 
       {/* Questions List or Questionnaire List */}
       {activeTab !== "questionnaire" ? (
-        <div className="card bg-base-100 border border-base-300 shadow-md">
+        <div className="card bg-card border border-border shadow-md">
           <div className="card-body p-0">
             {loading ? (
               <div className="flex justify-center py-12">
@@ -981,11 +1049,11 @@ export default function QuestionBankPage() {
               </div>
             ) : filteredQuestions.length === 0 ? (
             <div className="text-center py-12">
-              <FileQuestion className="h-16 w-16 mx-auto text-base-content/30 mb-4" />
-              <h3 className="text-xl font-semibold text-base-content mb-2">
+              <FileQuestion className="h-16 w-16 mx-auto text-foreground/30 mb-4" />
+              <h3 className="text-xl font-semibold text-foreground mb-2">
                 No questions found
               </h3>
-              <p className="text-base-content/70 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Create your first question to get started
               </p>
               <button className="btn btn-primary gap-2 items-center px-6" onClick={openCreate}>
@@ -997,14 +1065,14 @@ export default function QuestionBankPage() {
             <div className="overflow-x-auto">
               <table className="table table-zebra w-full">
                 <thead>
-                  <tr className="bg-base-200">
-                    <th className="text-base-content font-semibold whitespace-nowrap">Question</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap">Type</th>
+                  <tr className="bg-muted">
+                    <th className="text-foreground font-semibold whitespace-nowrap">Question</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">Type</th>
                     {activeTab === "module" && (
-                      <th className="text-base-content font-semibold whitespace-nowrap">Module</th>
+                      <th className="text-foreground font-semibold whitespace-nowrap">Module</th>
                     )}
-                    <th className="text-base-content font-semibold whitespace-nowrap">Category</th>
-                    <th className="text-base-content font-semibold whitespace-nowrap text-right">Actions</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap">Category</th>
+                    <th className="text-foreground font-semibold whitespace-nowrap text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1017,22 +1085,22 @@ export default function QuestionBankPage() {
                               <img
                                 src={question.image_url}
                                 alt="Question"
-                                className="w-16 h-16 object-cover rounded-lg border border-base-300"
+                                className="w-16 h-16 object-cover rounded-lg border border-border"
                               />
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <div className="font-semibold text-base-content line-clamp-2">
+                            <div className="font-semibold text-foreground line-clamp-2">
                               {question.question_text}
                             </div>
-                            <div className="text-sm text-base-content/70 mt-1">
+                            <div className="text-sm text-muted-foreground mt-1">
                               {question.difficulty && (
                                 <span className="badge badge-outline badge-sm mr-2">
                                   {difficultyOptions.find((d) => d.value === question.difficulty)?.label}
                                 </span>
                               )}
                               {question.points && (
-                                <span className="text-base-content/50">
+                                <span className="text-muted-foreground">
                                   {question.points} points
                                 </span>
                               )}
@@ -1052,7 +1120,7 @@ export default function QuestionBankPage() {
                               {question.module.name}
                             </span>
                           ) : (
-                            <span className="text-base-content/50 text-sm">N/A</span>
+                            <span className="text-muted-foreground text-sm">N/A</span>
                           )}
                         </td>
                       )}
@@ -1112,7 +1180,7 @@ export default function QuestionBankPage() {
         </div>
       ) : (
         /* Questionnaire List */
-        <div className="card bg-base-100 border border-base-300 shadow-md">
+        <div className="card bg-card border border-border shadow-md">
           <div className="card-body p-0">
             {loading ? (
               <div className="flex justify-center py-12">
@@ -1120,11 +1188,11 @@ export default function QuestionBankPage() {
               </div>
             ) : questionnaires.length === 0 ? (
               <div className="text-center py-12">
-                <FileText className="h-16 w-16 mx-auto text-base-content/30 mb-4" />
-                <h3 className="text-xl font-semibold text-base-content mb-2">
+                <FileText className="h-16 w-16 mx-auto text-foreground/30 mb-4" />
+                <h3 className="text-xl font-semibold text-foreground mb-2">
                   No questionnaires found
                 </h3>
-                <p className="text-base-content/70 mb-4">
+                <p className="text-muted-foreground mb-4">
                   Generate your first question paper to get started
                 </p>
                 <button
@@ -1139,22 +1207,22 @@ export default function QuestionBankPage() {
               <div className="overflow-x-auto">
                 <table className="table table-zebra w-full">
                   <thead>
-                    <tr className="bg-base-200">
-                      <th className="text-base-content font-semibold whitespace-nowrap">Title</th>
-                      <th className="text-base-content font-semibold whitespace-nowrap">Module</th>
-                      <th className="text-base-content font-semibold whitespace-nowrap">Batch</th>
-                      <th className="text-base-content font-semibold whitespace-nowrap">Categories</th>
-                      <th className="text-base-content font-semibold whitespace-nowrap">Questions</th>
-                      <th className="text-base-content font-semibold whitespace-nowrap text-right">Actions</th>
+                    <tr className="bg-muted">
+                      <th className="text-foreground font-semibold whitespace-nowrap">Title</th>
+                      <th className="text-foreground font-semibold whitespace-nowrap">Module</th>
+                      <th className="text-foreground font-semibold whitespace-nowrap">Batch</th>
+                      <th className="text-foreground font-semibold whitespace-nowrap">Categories</th>
+                      <th className="text-foreground font-semibold whitespace-nowrap">Questions</th>
+                      <th className="text-foreground font-semibold whitespace-nowrap text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {questionnaires.map((questionnaire) => (
                       <tr key={questionnaire.id} className="hover">
                         <td>
-                          <div className="font-semibold text-base-content">{questionnaire.title}</div>
+                          <div className="font-semibold text-foreground">{questionnaire.title}</div>
                           {questionnaire.description && (
-                            <div className="text-sm text-base-content/70 mt-1">
+                            <div className="text-sm text-muted-foreground mt-1">
                               {questionnaire.description}
                             </div>
                           )}
@@ -1165,7 +1233,7 @@ export default function QuestionBankPage() {
                               {questionnaire.module.name}
                             </span>
                           ) : (
-                            <span className="text-base-content/50 text-sm">General</span>
+                            <span className="text-muted-foreground text-sm">General</span>
                           )}
                         </td>
                         <td>
@@ -1188,7 +1256,7 @@ export default function QuestionBankPage() {
                           </div>
                         </td>
                         <td>
-                          <span className="text-base-content font-semibold">
+                          <span className="text-foreground font-semibold">
                             {questionnaire.total_questions} questions
                           </span>
                         </td>
@@ -1202,7 +1270,10 @@ export default function QuestionBankPage() {
                                   setSelectedQuestionnaire(res.questionnaire);
                                   setQuestionnaireModalMode("preview");
                                 } catch (error: any) {
-                                  alert(error.message || "Failed to load questionnaire");
+                                  showNotice({
+                                    message: error.message || "Failed to load questionnaire",
+                                    variant: "error",
+                                  });
                                 }
                               }}
                               title="Preview"
@@ -1217,7 +1288,10 @@ export default function QuestionBankPage() {
                                   const res = await questionnairesApi.getById(questionnaire.id);
                                   await handleDownloadQuestionnaire(res.questionnaire);
                                 } catch (error: any) {
-                                  alert(error.message || "Failed to download questionnaire");
+                                  showNotice({
+                                    message: error.message || "Failed to download questionnaire",
+                                    variant: "error",
+                                  });
                                 }
                               }}
                               title="Download"
@@ -1261,18 +1335,16 @@ export default function QuestionBankPage() {
       {/* Create/Edit Modal */}
       {modalMode && modalMode !== "view" && (
         <dialog className="modal modal-open">
-          <div className="modal-box bg-base-100 border border-base-300 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold mb-4 text-base-content">
-              {modalMode === "edit" ? "Edit Question" : "Create New Question"}
-            </h3>
+          <div className="modal-box bg-card border border-border max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3>{modalMode === "edit" ? "Edit Question" : "Create New Question"}</h3>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Question Type */}
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">Question Type *</span>
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">Question Type *</span>
                 </label>
                 <select
-                  className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                  className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                   value={formData.question_type}
                   onChange={(e) => {
                     const newType = e.target.value as QuestionType;
@@ -1307,11 +1379,11 @@ export default function QuestionBankPage() {
               {/* Module Selection (only for module questions) */}
               {formData.source === "module" && (
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Module *</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Module *</span>
                   </label>
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={formData.module_id || ""}
                     onChange={(e) => setFormData({ ...formData, module_id: e.target.value || null })}
                     required
@@ -1328,12 +1400,12 @@ export default function QuestionBankPage() {
 
               {/* Category */}
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">Category *</span>
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">Category *</span>
                 </label>
                 <div className="flex gap-2">
                   <select
-                    className="select select-bordered flex-1 border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered flex-1 border-border focus:border-primary focus:outline-none"
                     value={newCategory ? "__new__" : formData.category}
                     onChange={(e) => handleCategoryChange(e.target.value)}
                     required={!newCategory}
@@ -1357,7 +1429,7 @@ export default function QuestionBankPage() {
                   {(!formData.category || newCategory) && (
                     <input
                       type="text"
-                      className="input input-bordered flex-1 border-base-300 focus:border-primary focus:outline-none"
+                      className="input input-bordered flex-1 border-border focus:border-primary focus:outline-none"
                       placeholder="Enter new category"
                       value={newCategory}
                       onChange={(e) => {
@@ -1372,11 +1444,11 @@ export default function QuestionBankPage() {
 
               {/* Question Text */}
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">Question Text *</span>
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">Question Text *</span>
                 </label>
                 <textarea
-                  className="textarea textarea-bordered w-full border-base-300 focus:border-primary focus:outline-none min-h-[100px]"
+                  className="textarea textarea-bordered w-full border-border focus:border-primary focus:outline-none min-h-[100px]"
                   placeholder="Enter your question..."
                   value={formData.question_text}
                   onChange={(e) => setFormData({ ...formData, question_text: e.target.value })}
@@ -1386,8 +1458,8 @@ export default function QuestionBankPage() {
 
               {/* Question Image */}
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">Question Image (Optional)</span>
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">Question Image (Optional)</span>
                 </label>
                 <div className="flex items-center gap-4">
                   {formData.image_url && !formData.image_file && (
@@ -1395,7 +1467,7 @@ export default function QuestionBankPage() {
                       <img
                         src={formData.image_url}
                         alt="Question"
-                        className="w-32 h-32 object-cover rounded-lg border border-base-300"
+                        className="w-32 h-32 object-cover rounded-lg border border-border"
                       />
                       <button
                         type="button"
@@ -1411,7 +1483,7 @@ export default function QuestionBankPage() {
                       <img
                         src={URL.createObjectURL(formData.image_file)}
                         alt="Question"
-                        className="w-32 h-32 object-cover rounded-lg border border-base-300"
+                        className="w-32 h-32 object-cover rounded-lg border border-border"
                       />
                       <button
                         type="button"
@@ -1442,7 +1514,7 @@ export default function QuestionBankPage() {
                 <div className="form-control">
                   <div className="flex items-center justify-between mb-4">
                     <label className="label pb-0">
-                      <span className="label-text font-semibold text-base-content">Options *</span>
+                      <span className="label-text font-semibold text-foreground">Options *</span>
                     </label>
                     <button
                       type="button"
@@ -1457,14 +1529,14 @@ export default function QuestionBankPage() {
                     {formData.options.map((option, index) => (
                       <div
                         key={index}
-                        className="card bg-base-200 border border-base-300 p-4"
+                        className="card bg-muted border border-border p-4"
                       >
                         <div className="flex items-start gap-4">
                           <div className="flex-1 space-y-3">
                             <div className="flex items-center gap-2">
                               <input
                                 type="text"
-                                className="input input-bordered flex-1 border-base-300 focus:border-primary focus:outline-none"
+                                className="input input-bordered flex-1 border-border focus:border-primary focus:outline-none"
                                 placeholder="Option text"
                                 value={option.text}
                                 onChange={(e) => updateOption(index, "text", e.target.value)}
@@ -1506,7 +1578,7 @@ export default function QuestionBankPage() {
                                   <img
                                     src={option.image_url}
                                     alt="Option"
-                                    className="w-24 h-24 object-cover rounded-lg border border-base-300"
+                                    className="w-24 h-24 object-cover rounded-lg border border-border"
                                   />
                                   <button
                                     type="button"
@@ -1522,7 +1594,7 @@ export default function QuestionBankPage() {
                                   <img
                                     src={URL.createObjectURL(option.image_file)}
                                     alt="Option"
-                                    className="w-24 h-24 object-cover rounded-lg border border-base-300"
+                                    className="w-24 h-24 object-cover rounded-lg border border-border"
                                   />
                                   <button
                                     type="button"
@@ -1556,11 +1628,11 @@ export default function QuestionBankPage() {
               {(formData.question_type === "short_answer" ||
                 formData.question_type === "long_answer") && (
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Correct Answer *</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Correct Answer *</span>
                   </label>
                   <textarea
-                    className="textarea textarea-bordered w-full border-base-300 focus:border-primary focus:outline-none min-h-[100px]"
+                    className="textarea textarea-bordered w-full border-border focus:border-primary focus:outline-none min-h-[100px]"
                     placeholder="Enter the correct answer..."
                     value={formData.correct_answer || ""}
                     onChange={(e) =>
@@ -1574,11 +1646,11 @@ export default function QuestionBankPage() {
               {/* Difficulty and Points */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Difficulty</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Difficulty</span>
                   </label>
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={formData.difficulty || ""}
                     onChange={(e) =>
                       setFormData({
@@ -1596,12 +1668,12 @@ export default function QuestionBankPage() {
                   </select>
                 </div>
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Points</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Points</span>
                   </label>
                   <input
                     type="number"
-                    className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                     placeholder="Points"
                     min={0}
                     value={formData.points || ""}
@@ -1615,7 +1687,7 @@ export default function QuestionBankPage() {
                 </div>
               </div>
 
-              <div className="modal-action flex justify-end gap-3 mt-8">
+              <div className="modal-action">
                 <button
                   type="button"
                   className="btn btn-ghost gap-2 px-6"
@@ -1668,38 +1740,38 @@ export default function QuestionBankPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-4 sm:gap-y-3">
               {selectedQuestion.module ? (
                 <div>
-                  <p className="text-xs text-base-content/60">Module</p>
-                  <p className="text-sm font-medium text-base-content">{selectedQuestion.module.name}</p>
+                  <p className="text-xs text-muted-foreground">Module</p>
+                  <p className="text-sm font-medium text-foreground">{selectedQuestion.module.name}</p>
                 </div>
               ) : null}
               <div>
-                <p className="text-xs text-base-content/60">Category</p>
-                <p className="text-sm font-medium text-base-content">{selectedQuestion.category}</p>
+                <p className="text-xs text-muted-foreground">Category</p>
+                <p className="text-sm font-medium text-foreground">{selectedQuestion.category}</p>
               </div>
               {selectedQuestion.difficulty ? (
                 <div>
-                  <p className="text-xs text-base-content/60">Difficulty</p>
-                  <p className="text-sm font-medium text-base-content">
+                  <p className="text-xs text-muted-foreground">Difficulty</p>
+                  <p className="text-sm font-medium text-foreground">
                     {difficultyOptions.find((d) => d.value === selectedQuestion.difficulty)?.label}
                   </p>
                 </div>
               ) : null}
               {selectedQuestion.points ? (
                 <div>
-                  <p className="text-xs text-base-content/60">Points</p>
-                  <p className="text-sm font-medium text-base-content">{selectedQuestion.points}</p>
+                  <p className="text-xs text-muted-foreground">Points</p>
+                  <p className="text-sm font-medium text-foreground">{selectedQuestion.points}</p>
                 </div>
               ) : null}
             </div>
 
             <div>
               <RecordDetailSectionTitle>Prompt</RecordDetailSectionTitle>
-              <p className="text-sm font-medium text-base-content leading-snug">{selectedQuestion.question_text}</p>
+              <p className="text-sm font-medium text-foreground leading-snug">{selectedQuestion.question_text}</p>
               {selectedQuestion.image_url ? (
                 <img
                   src={selectedQuestion.image_url}
                   alt=""
-                  className="mt-2 w-full max-h-48 rounded-lg border border-base-300 object-contain bg-base-200/40"
+                  className="mt-2 w-full max-h-48 rounded-lg border border-border object-contain bg-muted/40"
                 />
               ) : null}
             </div>
@@ -1714,18 +1786,18 @@ export default function QuestionBankPage() {
                       className={`rounded-lg border px-2.5 py-2 text-sm ${
                         option.is_correct
                           ? "border-success/40 bg-success/10"
-                          : "border-base-300 bg-base-200/40"
+                          : "border-border bg-muted/40"
                       }`}
                     >
                       <div className="flex items-start gap-2">
                         {option.is_correct ? <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" /> : null}
-                        <span className="font-medium text-base-content leading-snug">{option.text}</span>
+                        <span className="font-medium text-foreground leading-snug">{option.text}</span>
                       </div>
                       {option.image_url ? (
                         <img
                           src={option.image_url}
                           alt=""
-                          className="mt-2 h-24 w-24 rounded-md border border-base-300 object-cover"
+                          className="mt-2 h-24 w-24 rounded-md border border-border object-cover"
                         />
                       ) : null}
                     </div>
@@ -1737,7 +1809,7 @@ export default function QuestionBankPage() {
             {selectedQuestion.correct_answer ? (
               <div>
                 <RecordDetailSectionTitle>Correct answer</RecordDetailSectionTitle>
-                <p className="rounded-lg border border-success/40 bg-success/10 px-2.5 py-2 text-sm font-medium text-base-content">
+                <p className="rounded-lg border border-success/40 bg-success/10 px-2.5 py-2 text-sm font-medium text-foreground">
                   {selectedQuestion.correct_answer}
                 </p>
               </div>
@@ -1758,17 +1830,17 @@ export default function QuestionBankPage() {
       {/* Generate Questionnaire Modal */}
       {questionnaireModalMode === "generate" && (
         <dialog className="modal modal-open">
-          <div className="modal-box bg-base-100 border border-base-300 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold mb-4 text-base-content">Generate Question Paper</h3>
+          <div className="modal-box bg-card border border-border max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3>Generate Question Paper</h3>
             <form onSubmit={handleGenerateQuestionnaire} className="space-y-6">
               {/* Title */}
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">Title *</span>
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">Title *</span>
                 </label>
                 <input
                   type="text"
-                  className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                  className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                   placeholder="e.g., Mid-Term Examination 2026"
                   value={questionnaireFormData.title}
                   onChange={(e) =>
@@ -1780,11 +1852,11 @@ export default function QuestionBankPage() {
 
               {/* Source */}
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">Source *</span>
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">Source *</span>
                 </label>
                 <select
-                  className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                  className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                   value={questionnaireFormData.source}
                   onChange={(e) =>
                     setQuestionnaireFormData({
@@ -1803,11 +1875,11 @@ export default function QuestionBankPage() {
               {/* Module Selection */}
               {questionnaireFormData.source === "module" && (
                 <div className="form-control">
-                  <label className="label pb-2">
-                    <span className="label-text font-semibold text-base-content">Module *</span>
+                  <label className="label">
+                    <span className="label-text font-semibold text-foreground">Module *</span>
                   </label>
                   <select
-                    className="select select-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                    className="select select-bordered w-full border-border focus:border-primary focus:outline-none"
                     value={questionnaireFormData.module_id}
                     onChange={(e) =>
                       setQuestionnaireFormData({
@@ -1830,12 +1902,12 @@ export default function QuestionBankPage() {
 
               {/* Batch */}
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">Batch *</span>
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">Batch *</span>
                 </label>
                 <input
                   type="text"
-                  className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                  className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                   placeholder="e.g., 2026"
                   value={questionnaireFormData.batch}
                   onChange={(e) =>
@@ -1847,11 +1919,11 @@ export default function QuestionBankPage() {
 
               {/* Description */}
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">Description</span>
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">Description</span>
                 </label>
                 <textarea
-                  className="textarea textarea-bordered w-full border-base-300 focus:border-primary focus:outline-none min-h-[80px]"
+                  className="textarea textarea-bordered w-full border-border focus:border-primary focus:outline-none min-h-[80px]"
                   placeholder="Optional description..."
                   value={questionnaireFormData.description}
                   onChange={(e) =>
@@ -1865,8 +1937,8 @@ export default function QuestionBankPage() {
 
               {/* Categories */}
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">Categories *</span>
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">Categories *</span>
                 </label>
                 {categories.length === 0 ? (
                   <div className="alert alert-warning">
@@ -1903,7 +1975,7 @@ export default function QuestionBankPage() {
                 )}
                 {questionnaireFormData.selected_categories.length === 0 && categories.length > 0 && (
                   <label className="label pt-1">
-                    <span className="label-text-alt text-error">
+                    <span className="label-text-alt text-destructive">
                       Please select at least one category
                     </span>
                   </label>
@@ -1912,22 +1984,22 @@ export default function QuestionBankPage() {
 
               {/* Question Counts */}
               <div className="form-control">
-                <label className="label pb-2">
-                  <span className="label-text font-semibold text-base-content">
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">
                     Number of Questions by Type *
                   </span>
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {questionTypeOptions.map((type) => (
                     <div key={type.value} className="form-control">
-                      <label className="label pb-2">
-                        <span className="label-text text-sm font-medium text-base-content">
+                      <label className="label">
+                        <span className="label-text text-sm font-medium text-foreground">
                           {type.label}
                         </span>
                       </label>
                       <input
                         type="number"
-                        className="input input-bordered w-full border-base-300 focus:border-primary focus:outline-none"
+                        className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
                         min={0}
                         value={questionnaireFormData.question_counts[type.value as keyof typeof questionnaireFormData.question_counts] || 0}
                         onChange={(e) =>
@@ -1944,7 +2016,7 @@ export default function QuestionBankPage() {
                   ))}
                 </div>
                 <label className="label pt-2">
-                  <span className="label-text-alt text-base-content/70">
+                  <span className="label-text-alt text-muted-foreground">
                     Total:{" "}
                     {Object.values(questionnaireFormData.question_counts).reduce(
                       (sum, count) => sum + count,
@@ -1955,7 +2027,7 @@ export default function QuestionBankPage() {
                 </label>
               </div>
 
-              <div className="modal-action flex justify-end gap-3 mt-8">
+              <div className="modal-action">
                 <button
                   type="button"
                   className="btn btn-ghost gap-2 px-6"
@@ -1978,35 +2050,35 @@ export default function QuestionBankPage() {
       {/* Preview Questionnaire Modal */}
       {questionnaireModalMode === "preview" && selectedQuestionnaire && (
         <dialog className="modal modal-open">
-          <div className="modal-box bg-base-100 border border-base-300 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold mb-4 text-base-content">Questionnaire Preview</h3>
+          <div className="modal-box bg-card border border-border max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3>Questionnaire Preview</h3>
             <div className="space-y-4">
-              <div className="card bg-base-200 border border-base-300 p-4">
+              <div className="card bg-muted border border-border p-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-base-content/70">Title</p>
-                    <p className="font-semibold text-base-content">{selectedQuestionnaire.title}</p>
+                    <p className="text-sm text-muted-foreground">Title</p>
+                    <p className="font-semibold text-foreground">{selectedQuestionnaire.title}</p>
                   </div>
                   {selectedQuestionnaire.module && (
                     <div>
-                      <p className="text-sm text-base-content/70">Module</p>
-                      <p className="font-semibold text-base-content">
+                      <p className="text-sm text-muted-foreground">Module</p>
+                      <p className="font-semibold text-foreground">
                         {selectedQuestionnaire.module.name}
                       </p>
                     </div>
                   )}
                   <div>
-                    <p className="text-sm text-base-content/70">Batch</p>
-                    <p className="font-semibold text-base-content">{selectedQuestionnaire.batch}</p>
+                    <p className="text-sm text-muted-foreground">Batch</p>
+                    <p className="font-semibold text-foreground">{selectedQuestionnaire.batch}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-base-content/70">Total Questions</p>
-                    <p className="font-semibold text-base-content">
+                    <p className="text-sm text-muted-foreground">Total Questions</p>
+                    <p className="font-semibold text-foreground">
                       {selectedQuestionnaire.total_questions}
                     </p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-sm text-base-content/70 mb-2">Categories</p>
+                    <p className="text-sm text-muted-foreground mb-2">Categories</p>
                     <div className="flex flex-wrap gap-2">
                       {selectedQuestionnaire.selected_categories.map((cat, idx) => (
                         <span key={idx} className="badge badge-outline badge-sm">
@@ -2021,21 +2093,21 @@ export default function QuestionBankPage() {
               <div className="divider"></div>
 
               <div>
-                <h4 className="font-semibold text-base-content mb-3">Questions</h4>
+                <h4 className="font-semibold text-foreground mb-3">Questions</h4>
                 <div className="space-y-4">
                   {selectedQuestionnaire.questions?.map((q: any, index: number) => (
                     <div
                       key={q.id}
-                      className="card bg-base-200 border border-base-300 p-4"
+                      className="card bg-muted border border-border p-4"
                     >
-                      <div className="font-semibold text-base-content mb-2">
+                      <div className="font-semibold text-foreground mb-2">
                         {index + 1}. {q.question_text}
                       </div>
                       {q.image_url && (
                         <img
                           src={q.image_url}
                           alt="Question"
-                          className="w-full max-w-md rounded-lg border border-base-300 mt-2"
+                          className="w-full max-w-md rounded-lg border border-border mt-2"
                         />
                       )}
                       {q.options && q.options.length > 0 && (
@@ -2044,13 +2116,13 @@ export default function QuestionBankPage() {
                             <div
                               key={optIdx}
                               className={`flex items-start gap-2 p-2 rounded ${
-                                opt.is_correct ? "bg-success/10 border border-success" : "bg-base-100"
+                                opt.is_correct ? "bg-success/10 border border-success" : "bg-card"
                               }`}
                             >
-                              <span className="font-semibold text-base-content min-w-[20px]">
+                              <span className="font-semibold text-foreground min-w-[20px]">
                                 {String.fromCharCode(65 + optIdx)}.
                               </span>
-                              <span className="text-base-content flex-1">{opt.text}</span>
+                              <span className="text-foreground flex-1">{opt.text}</span>
                               {opt.is_correct && (
                                 <Check className="h-4 w-4 text-success flex-shrink-0" />
                               )}
@@ -2058,7 +2130,7 @@ export default function QuestionBankPage() {
                                 <img
                                   src={opt.image_url}
                                   alt="Option"
-                                  className="w-24 h-24 object-cover rounded-lg border border-base-300 mt-1"
+                                  className="w-24 h-24 object-cover rounded-lg border border-border mt-1"
                                 />
                               )}
                             </div>
@@ -2068,7 +2140,7 @@ export default function QuestionBankPage() {
                       {q.correct_answer && (
                         <div className="mt-3 p-2 bg-success/10 border border-success rounded">
                           <span className="text-sm font-semibold text-success">Answer: </span>
-                          <span className="text-base-content">{q.correct_answer}</span>
+                          <span className="text-foreground">{q.correct_answer}</span>
                         </div>
                       )}
                     </div>
@@ -2077,7 +2149,7 @@ export default function QuestionBankPage() {
               </div>
             </div>
 
-            <div className="modal-action flex justify-end gap-3 mt-8">
+            <div className="modal-action">
               <button className="btn btn-ghost gap-2 px-6" onClick={closeQuestionnaireModal}>
                 <span className="whitespace-nowrap">Close</span>
               </button>
@@ -2087,7 +2159,10 @@ export default function QuestionBankPage() {
                   try {
                     await handleDownloadQuestionnaire(selectedQuestionnaire);
                   } catch (error: any) {
-                    alert(error.message || "Failed to download questionnaire");
+                    showNotice({
+                      message: error.message || "Failed to download questionnaire",
+                      variant: "error",
+                    });
                   }
                 }}
               >
@@ -2107,7 +2182,7 @@ export default function QuestionBankPage() {
         title="Delete questionnaire?"
         description={
           <>
-            <span className="font-medium text-base-content">{deleteQuestionnaireTarget?.title}</span>.
+            <span className="font-medium text-foreground">{deleteQuestionnaireTarget?.title}</span>.
             This cannot be undone.
           </>
         }

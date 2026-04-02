@@ -21,17 +21,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
     setTheme(initialTheme);
-    document.documentElement.setAttribute("data-theme", initialTheme);
+    const html = document.documentElement;
+    html.classList.toggle("dark", initialTheme === "dark");
   }, []);
 
   useEffect(() => {
-    if (mounted) {
-      const html = document.documentElement;
-      html.setAttribute("data-theme", theme);
-      html.classList.remove("light", "dark");
-      html.classList.add(theme);
-      localStorage.setItem("theme", theme);
-    }
+    if (!mounted) return;
+    const html = document.documentElement;
+    html.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("theme", theme);
   }, [theme, mounted]);
 
   const toggleTheme = () => {
