@@ -3,6 +3,19 @@ import type { GalleryCategory, GalleryImage } from "@/app/types/gallery";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+if (typeof window !== 'undefined') {
+  const host = window.location.hostname;
+  const pageIsLocal = host === 'localhost' || host === '127.0.0.1';
+  const apiLooksLocal = /(^|\/)localhost(:\d+)?(\/|$)/.test(API_BASE_URL)
+    || /127\.0\.0\.1/.test(API_BASE_URL);
+  if (!pageIsLocal && apiLooksLocal) {
+    console.error(
+      '[Techna Admin] API URL still targets localhost, but this site is not served from localhost. ' +
+        'Set NEXT_PUBLIC_API_URL to your live API (e.g. https://api.yourdomain.com/api/v1) and run next build again.',
+    );
+  }
+}
+
 interface ApiResponse<T> {
   data?: T;
   message?: string;
