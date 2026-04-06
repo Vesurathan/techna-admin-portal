@@ -218,12 +218,15 @@ export const rolesApi = {
 
 // Staffs API
 export const staffsApi = {
-  getAll: async (page: number = 1, all: boolean = false) => {
+  getAll: async (page: number = 1, all: boolean = false, includeInactive: boolean = false) => {
     const params = new URLSearchParams();
     if (all) {
       params.append('all', 'true');
     } else {
       params.append('page', page.toString());
+    }
+    if (includeInactive) {
+      params.append('include_inactive', 'true');
     }
     return apiClient.get<{ staffs: any[]; pagination?: any }>(`/staffs?${params.toString()}`);
   },
@@ -232,44 +235,13 @@ export const staffsApi = {
     return apiClient.get<{ staff: any }>(`/staffs/${id}`);
   },
 
-  create: async (data: {
-    first_name: string;
-    last_name: string;
-    nic_number?: string;
-    date_of_birth: string;
-    address: string;
-    gender: string;
-    blood_group?: string;
-    school_name?: string;
-    qualifications?: string;
-    module_ids?: number[];
-    secondary_phone: string;
-    secondary_phone_has_whatsapp: boolean;
-    medical_notes?: string;
-    image_path?: string;
-    status: string;
-  }) => {
-    return apiClient.post<{ staff: any }>('/staffs', data);
+  create: async (data: FormData) => {
+    return apiClient.post<{ staff: any }>("/staffs", data);
   },
 
-  update: async (id: string, data: {
-    first_name: string;
-    last_name: string;
-    nic_number?: string;
-    date_of_birth: string;
-    address: string;
-    gender: string;
-    blood_group?: string;
-    school_name?: string;
-    qualifications?: string;
-    module_ids?: number[];
-    secondary_phone: string;
-    secondary_phone_has_whatsapp: boolean;
-    medical_notes?: string;
-    image_path?: string;
-    status: string;
-  }) => {
-    return apiClient.put<{ staff: any }>(`/staffs/${id}`, data);
+  /** Use POST with multipart so profile `image` uploads work (same handler as PUT). */
+  update: async (id: string, data: FormData) => {
+    return apiClient.post<{ staff: any }>(`/staffs/${id}`, data);
   },
 
   delete: async (id: string) => {

@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   UserCog,
   Plus,
   Search,
-  Filter,
   Download,
   Eye,
   Pencil,
@@ -33,6 +32,7 @@ import { useAuth } from "@/app/contexts/AuthContext";
 import { useAppNotice } from "@/app/contexts/AppNoticeContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StaffAttendanceQr } from "@/app/components/StaffAttendanceQr";
+import { PersonAvatar } from "@/app/components/PersonAvatar";
 
 type ModalMode = "create" | "edit" | "view" | null;
 
@@ -92,6 +92,43 @@ const getStatusBadge = (status: StaffStatus) => {
   return badges[status] || "badge-ghost";
 };
 
+function buildStaffFormData(form: StaffFormData): FormData {
+  const fd = new FormData();
+  fd.append("first_name", form.firstName.trim());
+  fd.append("last_name", form.lastName.trim());
+  const nic = form.nicNumber.trim();
+  if (nic) {
+    fd.append("nic_number", nic);
+  }
+  fd.append("date_of_birth", form.dateOfBirth);
+  fd.append("address", form.address);
+  fd.append("gender", form.gender);
+  const bg = form.bloodGroup.trim();
+  if (bg) {
+    fd.append("blood_group", bg);
+  }
+  const school = form.schoolName.trim();
+  if (school) {
+    fd.append("school_name", school);
+  }
+  const qual = form.qualifications.trim();
+  if (qual) {
+    fd.append("qualifications", qual);
+  }
+  form.moduleIds.forEach((id) => fd.append("module_ids[]", id));
+  fd.append("secondary_phone", form.secondaryPhone.trim());
+  fd.append("secondary_phone_has_whatsapp", form.secondaryPhoneHasWhatsapp ? "1" : "0");
+  const med = form.medicalNotes.trim();
+  if (med) {
+    fd.append("medical_notes", med);
+  }
+  fd.append("status", form.status);
+  if (form.imageFile) {
+    fd.append("image", form.imageFile);
+  }
+  return fd;
+}
+
 export default function StaffsPage() {
   const { isSuperAdmin } = useAuth();
   const { showNotice } = useAppNotice();
@@ -114,6 +151,9 @@ export default function StaffsPage() {
     to: 0,
     has_more_pages: false,
   });
+
+  /** When false, API returns only active staff (removed staff are hidden). */
+  const [showInactive, setShowInactive] = useState(false);
 
   const [formData, setFormData] = useState<StaffFormData>({
     firstName: "",
@@ -157,49 +197,51 @@ export default function StaffsPage() {
     );
   }, [staffs, search]);
 
-  const loadData = async (page: number = currentPage) => {
-    try {
-      setLoading(true);
-      const [staffsRes, modulesRes] = await Promise.all([
-        staffsApi.getAll(page),
-        modulesApi.getAll(),
-      ]);
+  const loadData = useCallback(
+    async (page: number) => {
+      try {
+        setLoading(true);
+        const [staffsRes, modulesRes] = await Promise.all([
+          staffsApi.getAll(page, false, showInactive),
+          modulesApi.getAll(),
+        ]);
 
-      // Update pagination state
-      if (staffsRes.pagination) {
-        setPagination(staffsRes.pagination);
-        setCurrentPage(staffsRes.pagination.current_page);
+        if (staffsRes.pagination) {
+          setPagination(staffsRes.pagination);
+          setCurrentPage(staffsRes.pagination.current_page);
+        }
+
+        const mappedStaffs: Staff[] = staffsRes.staffs.map((s: any) => mapApiStaffRecord(s));
+
+        const mappedModules: Module[] = modulesRes.modules.map((m: any) => ({
+          id: m.id.toString(),
+          name: m.name,
+          category: m.category,
+          subModulesCount: m.sub_modules_count ?? m.subModulesCount ?? 0,
+          amount: Number(m.amount ?? 0),
+          staffs: (m.staffs || []).map((s: any) => ({
+            id: s.id.toString(),
+            name: s.name,
+            email: s.email,
+            department: s.department ?? null,
+            phone: s.phone ?? null,
+          })),
+        }));
+
+        setStaffs(mappedStaffs);
+        setModules(mappedModules);
+      } catch (error) {
+        console.error("Failed to load staffs/modules:", error);
+      } finally {
+        setLoading(false);
       }
-
-      const mappedStaffs: Staff[] = staffsRes.staffs.map((s: any) => mapApiStaffRecord(s));
-
-      const mappedModules: Module[] = modulesRes.modules.map((m: any) => ({
-        id: m.id.toString(),
-        name: m.name,
-        category: m.category,
-        subModulesCount: m.sub_modules_count ?? m.subModulesCount ?? 0,
-        amount: Number(m.amount ?? 0),
-        staffs: (m.staffs || []).map((s: any) => ({
-          id: s.id.toString(),
-          name: s.name,
-          email: s.email,
-          department: s.department ?? null,
-          phone: s.phone ?? null,
-        })),
-      }));
-
-      setStaffs(mappedStaffs);
-      setModules(mappedModules);
-    } catch (error) {
-      console.error("Failed to load staffs/modules:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [showInactive]
+  );
 
   useEffect(() => {
-    loadData();
-  }, []);
+    void loadData(1);
+  }, [showInactive, loadData]);
 
   const openCreate = () => {
     setSelectedStaff(null);
@@ -290,33 +332,14 @@ export default function StaffsPage() {
     e.preventDefault();
 
     try {
-      // TODO: Upload image to S3 first, then get image_path
-      const image_path = null; // Will be set after S3 upload
-
-      const payload = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        nic_number: formData.nicNumber || null,
-        date_of_birth: formData.dateOfBirth,
-        address: formData.address,
-        gender: formData.gender,
-        blood_group: formData.bloodGroup || null,
-        school_name: formData.schoolName || null,
-        qualifications: formData.qualifications || null,
-        module_ids: formData.moduleIds.map((id) => parseInt(id)),
-        secondary_phone: formData.secondaryPhone,
-        secondary_phone_has_whatsapp: formData.secondaryPhoneHasWhatsapp,
-        medical_notes: formData.medicalNotes || null,
-        image_path: image_path,
-        status: formData.status,
-      };
+      const payload = buildStaffFormData(formData);
 
       let savedStaffId: string | null = selectedStaff?.id ?? null;
       if (modalMode === "edit" && selectedStaff) {
-        const res = await staffsApi.update(selectedStaff.id, payload as any);
+        const res = await staffsApi.update(selectedStaff.id, payload);
         savedStaffId = (res as any)?.staff?.id?.toString?.() ?? selectedStaff.id;
       } else {
-        const res = await staffsApi.create(payload as any);
+        const res = await staffsApi.create(payload);
         const created = (res as any)?.staff;
         savedStaffId = created?.id?.toString?.() ?? null;
         if (created) {
@@ -332,7 +355,7 @@ export default function StaffsPage() {
         });
       }
 
-      await loadData();
+      await loadData(currentPage);
       closeModal();
     } catch (error: any) {
       showNotice({
@@ -346,7 +369,7 @@ export default function StaffsPage() {
     if (!deleteTarget) return;
     try {
       await staffsApi.delete(deleteTarget.id);
-      await loadData();
+      await loadData(currentPage);
       setDeleteTarget(null);
     } catch (error: any) {
       showNotice({
@@ -397,12 +420,17 @@ export default function StaffsPage() {
                 </button>
               </div>
             </div>
-            <div className="form-control flex-shrink-0">
-              <button className="btn btn-outline btn-sm gap-2 w-full sm:w-auto">
-                <Filter className="h-4 w-4" />
-                <span className="hidden sm:inline">Filter</span>
-              </button>
-            </div>
+            <label className="label cursor-pointer justify-start sm:justify-center gap-2 flex-shrink-0 border border-border rounded-lg px-3 py-2 bg-card">
+              <input
+                type="checkbox"
+                className="checkbox checkbox-primary checkbox-sm"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+              />
+              <span className="label-text text-sm text-foreground whitespace-nowrap">
+                Show inactive / removed
+              </span>
+            </label>
           </div>
         </div>
       </div>
@@ -421,7 +449,9 @@ export default function StaffsPage() {
                 No staff found
               </h3>
               <p className="text-muted-foreground mb-4">
-                Create your first staff member to get started
+                {showInactive
+                  ? "No staff records match this view."
+                  : "No active staff. Create a staff member, or enable “Show inactive / removed” to see deactivated staff."}
               </p>
               <button className="btn btn-primary gap-2 items-center px-6" onClick={openCreate}>
                 <Plus className="h-4 w-4" />
@@ -433,6 +463,7 @@ export default function StaffsPage() {
               <table className="table table-zebra w-full">
                 <thead>
                   <tr className="bg-muted">
+                    <th className="text-foreground font-semibold whitespace-nowrap w-14">Photo</th>
                     <th className="text-foreground font-semibold whitespace-nowrap">Staff</th>
                     <th className="text-foreground font-semibold whitespace-nowrap">Phone</th>
                     <th className="text-foreground font-semibold whitespace-nowrap">School</th>
@@ -444,31 +475,22 @@ export default function StaffsPage() {
                 <tbody>
                   {filteredStaffs.map((staff) => (
                     <tr key={staff.id} className="hover">
-                      <td>
-                        <div className="flex items-center gap-3 min-w-0">
-                          {staff.imagePath ? (
-                            <div className="avatar flex-shrink-0">
-                              <div className="w-10 h-10 rounded-full">
-                                <img src={staff.imagePath} alt={staff.fullName} />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="avatar placeholder flex-shrink-0">
-                              <div className="bg-primary text-primary-foreground rounded-full w-10 h-10 flex items-center justify-center">
-                                <span className="text-sm font-semibold">
-                                  {staff.firstName?.charAt(0) || "S"}
-                                  {staff.lastName?.charAt(0) || ""}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <div className="font-semibold text-foreground truncate">
-                              {staff.fullName}
-                            </div>
-                            <div className="text-sm text-muted-foreground truncate">
-                              {staff.nicNumber || "N/A"}
-                            </div>
+                      <td className="align-middle w-14">
+                        <PersonAvatar
+                          imageUrl={staff.imagePath}
+                          firstName={staff.firstName}
+                          lastName={staff.lastName}
+                          alt={staff.fullName}
+                          size="sm"
+                        />
+                      </td>
+                      <td className="align-middle">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-foreground truncate">
+                            {staff.fullName}
+                          </div>
+                          <div className="text-sm text-muted-foreground truncate">
+                            {staff.nicNumber || "N/A"}
                           </div>
                         </div>
                       </td>
@@ -1007,20 +1029,14 @@ export default function StaffsPage() {
         {selectedStaff && (
           <div className="space-y-4">
             <div className="flex gap-3 border-b border-border pb-3">
-              {selectedStaff.imagePath ? (
-                <div className="avatar shrink-0">
-                  <div className="w-14 rounded-full ring ring-border ring-offset-2 ring-offset-background">
-                    <img src={selectedStaff.imagePath} alt="" />
-                  </div>
-                </div>
-              ) : (
-                <div className="avatar placeholder shrink-0">
-                  <div className="w-14 rounded-full bg-primary text-primary-foreground text-sm font-semibold">
-                    {selectedStaff.firstName?.charAt(0) || "S"}
-                    {selectedStaff.lastName?.charAt(0) || ""}
-                  </div>
-                </div>
-              )}
+              <PersonAvatar
+                imageUrl={selectedStaff.imagePath}
+                firstName={selectedStaff.firstName}
+                lastName={selectedStaff.lastName}
+                alt={selectedStaff.fullName}
+                size="md"
+                ring
+              />
               <div className="min-w-0 flex-1">
                 <p className="text-base font-semibold leading-tight text-foreground">{selectedStaff.fullName}</p>
                 <div className="mt-1.5">
@@ -1156,14 +1172,15 @@ export default function StaffsPage() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Delete staff?"
+        title="Remove staff from directory?"
         description={
           <>
-            Remove <span className="font-medium text-foreground">{deleteTarget?.fullName}</span>.
-            This cannot be undone.
+            <span className="font-medium text-foreground">{deleteTarget?.fullName}</span> will be marked inactive,
+            removed from the staff list and module assignments. Enable “Show inactive / removed” to see them again
+            or reactivate from edit.
           </>
         }
-        confirmLabel="Delete"
+        confirmLabel="Remove"
         onClose={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
       />

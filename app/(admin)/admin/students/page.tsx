@@ -37,6 +37,7 @@ import Pagination from "@/app/components/Pagination";
 import { useAppNotice } from "@/app/contexts/AppNoticeContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StudentAttendanceQr } from "@/app/components/StudentAttendanceQr";
+import { PersonAvatar } from "@/app/components/PersonAvatar";
 
 function mapApiStudentRecord(s: any): Student {
   return {
@@ -58,7 +59,7 @@ function mapApiStudentRecord(s: any): Student {
     schoolName: s.schoolName,
     bloodGroup: s.bloodGroup,
     medicalNotes: s.medicalNotes,
-    imagePath: s.imagePath,
+    imagePath: s.imagePath ?? s.image_path ?? null,
     admissionFee: Number(s.admissionFee ?? 500),
     moduleTotalAmount: Number(s.moduleTotalAmount ?? 0),
     paidAmount: Number(s.paidAmount ?? 0),
@@ -465,6 +466,7 @@ export default function StudentsPage() {
               <table className="table table-zebra w-full">
                 <thead>
                   <tr className="bg-muted">
+                    <th className="text-foreground font-semibold whitespace-nowrap w-14">Photo</th>
                     <th className="text-foreground font-semibold whitespace-nowrap">Student</th>
                     <th className="text-foreground font-semibold whitespace-nowrap">Phone</th>
                     <th className="text-foreground font-semibold whitespace-nowrap">Parent Phone</th>
@@ -477,31 +479,22 @@ export default function StudentsPage() {
                 <tbody>
                   {filteredStudents.map((student) => (
                     <tr key={student.id} className="hover">
-                      <td>
-                        <div className="flex items-center gap-3 min-w-0">
-                          {student.imagePath ? (
-                            <div className="avatar flex-shrink-0">
-                              <div className="w-10 h-10 rounded-full">
-                                <img src={student.imagePath} alt={student.fullName} />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="avatar placeholder flex-shrink-0">
-                              <div className="bg-primary text-primary-foreground rounded-full w-10 h-10 flex items-center justify-center">
-                                <span className="text-sm font-semibold">
-                                  {student.firstName.charAt(0)}
-                                  {student.lastName.charAt(0)}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <div className="font-semibold text-foreground truncate">
-                              {student.fullName}
-                            </div>
-                            <div className="text-sm text-muted-foreground truncate">
-                              {student.admissionNumber}
-                            </div>
+                      <td className="align-middle w-14">
+                        <PersonAvatar
+                          imageUrl={student.imagePath}
+                          firstName={student.firstName}
+                          lastName={student.lastName}
+                          alt={student.fullName}
+                          size="sm"
+                        />
+                      </td>
+                      <td className="align-middle">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-foreground truncate">
+                            {student.fullName}
+                          </div>
+                          <div className="text-sm text-muted-foreground truncate">
+                            {student.admissionNumber}
                           </div>
                         </div>
                       </td>
@@ -1091,20 +1084,14 @@ export default function StudentsPage() {
         {selectedStudent && (
           <div className="space-y-4">
             <div className="flex gap-3 border-b border-border pb-3">
-              {selectedStudent.imagePath ? (
-                <div className="avatar shrink-0">
-                  <div className="w-14 rounded-full ring ring-border ring-offset-2 ring-offset-background">
-                    <img src={selectedStudent.imagePath} alt="" />
-                  </div>
-                </div>
-              ) : (
-                <div className="avatar placeholder shrink-0">
-                  <div className="w-14 rounded-full bg-primary text-primary-foreground text-sm font-semibold">
-                    {selectedStudent.firstName.charAt(0)}
-                    {selectedStudent.lastName.charAt(0)}
-                  </div>
-                </div>
-              )}
+              <PersonAvatar
+                imageUrl={selectedStudent.imagePath}
+                firstName={selectedStudent.firstName}
+                lastName={selectedStudent.lastName}
+                alt={selectedStudent.fullName}
+                size="md"
+                ring
+              />
               <div className="min-w-0 flex-1">
                 <p className="text-base font-semibold leading-tight text-foreground">
                   {selectedStudent.fullName}
