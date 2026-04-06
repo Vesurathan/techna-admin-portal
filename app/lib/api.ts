@@ -1,17 +1,31 @@
 import type { PhotoFolder, PhotoLibraryFile } from "@/app/types/photo-library";
 import type { GalleryCategory, GalleryImage } from "@/app/types/gallery";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+/** Live Laravel API when env is not set (production builds). Override with NEXT_PUBLIC_API_URL if needed. */
+const DEFAULT_PRODUCTION_API_BASE = "https://api.technatechnicalinstitute.com/api/v1";
 
-if (typeof window !== 'undefined') {
+function resolveApiBaseUrl(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (fromEnv) {
+    return fromEnv.replace(/\/$/, "");
+  }
+  if (process.env.NODE_ENV === "production") {
+    return DEFAULT_PRODUCTION_API_BASE;
+  }
+  return "http://localhost:8000/api/v1";
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
+
+if (typeof window !== "undefined") {
   const host = window.location.hostname;
-  const pageIsLocal = host === 'localhost' || host === '127.0.0.1';
-  const apiLooksLocal = /(^|\/)localhost(:\d+)?(\/|$)/.test(API_BASE_URL)
-    || /127\.0\.0\.1/.test(API_BASE_URL);
+  const pageIsLocal = host === "localhost" || host === "127.0.0.1";
+  const apiLooksLocal =
+    /(^|\/)localhost(:\d+)?(\/|$)/.test(API_BASE_URL) || /127\.0\.0\.1/.test(API_BASE_URL);
   if (!pageIsLocal && apiLooksLocal) {
     console.error(
-      '[Techna Admin] API URL still targets localhost, but this site is not served from localhost. ' +
-        'Set NEXT_PUBLIC_API_URL to your live API (e.g. https://api.yourdomain.com/api/v1) and run next build again.',
+      "[Techna Admin] API URL still targets localhost, but this site is not served from localhost. " +
+        "Set NEXT_PUBLIC_API_URL and rebuild, or ensure NODE_ENV=production so the default api.technatechnicalinstitute.com URL is used.",
     );
   }
 }
