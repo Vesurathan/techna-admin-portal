@@ -9,6 +9,7 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 export const metadata: Metadata = {
   title: "Techna Admin Portal",
   description: "Techna Technical Institute Admin Portal",
+  // Tab icon: `app/icon.png` (Techna smart-tech logo). Avoid `app/favicon.ico` or the Next default overrides.
 };
 
 export default function RootLayout({
