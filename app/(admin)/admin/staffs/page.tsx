@@ -363,7 +363,7 @@ export default function StaffsPage() {
         <div className="flex-1">
           <h1 className="text-3xl font-bold text-foreground">Staffs</h1>
           <p className="text-muted-foreground mt-2">
-            Manage staff members and their information
+            Add staff with or without modules; assign modules anytime from this form
           </p>
         </div>
         <div className="flex gap-2 flex-wrap items-center flex-shrink-0">
@@ -785,15 +785,21 @@ export default function StaffsPage() {
               <div className="admin-form-section">
                 <h4>
                   <BookOpen className="h-5 w-5 shrink-0 text-primary" />
-                  Module Assignment (Multiple Selection)
+                  Module assignment <span className="text-base font-normal text-muted-foreground">(optional)</span>
                 </h4>
                 <div className="form-control">
                   {modules.length === 0 ? (
                     <div className="alert alert-info">
-                      <span>No modules available. Please create modules first.</span>
+                      <span>
+                        No modules yet. Save this staff member anyway, then create modules under{" "}
+                        <strong>Modules</strong> and edit this staff to assign them.
+                      </span>
                     </div>
                   ) : (
                     <>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Select one or more modules, or leave empty and assign later.
+                      </p>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-h-64 overflow-y-auto p-4 border border-border rounded-lg bg-base-50">
                         {modules.map((module) => (
                           <label

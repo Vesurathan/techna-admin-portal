@@ -165,7 +165,7 @@ export default function ModulesPage() {
         category: formData.category,
         sub_modules_count: Number(formData.subModulesCount),
         amount: Number(formData.amount),
-        staff_ids: formData.staffIds,
+        staff_ids: formData.staffIds.map((id) => parseInt(id, 10)),
       };
 
       if (modalMode === "edit" && selectedModule) {
@@ -205,7 +205,7 @@ export default function ModulesPage() {
         <div className="flex-1">
           <h1 className="text-3xl font-bold text-foreground">Modules</h1>
           <p className="text-muted-foreground mt-2">
-            Manage modules, staff assignments, and pricing
+            Create modules first, then assign staff when adding or editing staff
           </p>
         </div>
         <div className="flex gap-2 flex-wrap items-center flex-shrink-0">
@@ -468,31 +468,41 @@ export default function ModulesPage() {
               <div className="form-control">
                 <label className="label">
                   <span className="label-text font-semibold text-foreground">
-                    Staff (Multiple Selection)
+                    Assigned staff <span className="font-normal text-muted-foreground">(optional)</span>
                   </span>
                 </label>
-                <select
-                  multiple
-                  className="select select-bordered w-full h-32 border-border focus:border-primary focus:outline-none"
-                  value={formData.staffIds}
-                  onChange={(e) => {
-                    const values = Array.from(
-                      e.target.selectedOptions
-                    ).map((option) => option.value);
-                    setFormData({ ...formData, staffIds: values });
-                  }}
-                >
-                  {staffs.map((staff) => (
-                    <option key={staff.id} value={staff.id}>
-                      {staff.name || "Unknown"} {staff.department ? `- ${staff.department}` : ""}
-                    </option>
-                  ))}
-                </select>
-                <label className="label pt-1">
-                  <span className="label-text-alt text-muted-foreground">
-                    Hold Ctrl/Cmd to select multiple teachers
-                  </span>
-                </label>
+                {staffs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2">
+                    No staff yet. Save the module without staff—you can assign teachers from{" "}
+                    <strong>Staff</strong> after you add them.
+                  </p>
+                ) : (
+                  <>
+                    <select
+                      multiple
+                      className="select select-bordered w-full h-32 border-border focus:border-primary focus:outline-none"
+                      value={formData.staffIds}
+                      onChange={(e) => {
+                        const values = Array.from(
+                          e.target.selectedOptions
+                        ).map((option) => option.value);
+                        setFormData({ ...formData, staffIds: values });
+                      }}
+                    >
+                      {staffs.map((staff) => (
+                        <option key={staff.id} value={staff.id}>
+                          {staff.name || "Unknown"} {staff.department ? `- ${staff.department}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="label pt-1">
+                      <span className="label-text-alt text-muted-foreground">
+                        Optional. You can also assign modules when creating or editing a staff member.
+                        Hold Ctrl/Cmd to select multiple.
+                      </span>
+                    </label>
+                  </>
+                )}
               </div>
               </div>
 

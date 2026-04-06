@@ -242,7 +242,7 @@ export const staffsApi = {
     blood_group?: string;
     school_name?: string;
     qualifications?: string;
-    module_ids: number[];
+    module_ids?: number[];
     secondary_phone: string;
     secondary_phone_has_whatsapp: boolean;
     medical_notes?: string;
@@ -262,7 +262,7 @@ export const staffsApi = {
     blood_group?: string;
     school_name?: string;
     qualifications?: string;
-    module_ids: number[];
+    module_ids?: number[];
     secondary_phone: string;
     secondary_phone_has_whatsapp: boolean;
     medical_notes?: string;
@@ -304,7 +304,7 @@ export const modulesApi = {
     category: string;
     sub_modules_count: number;
     amount: number;
-    staff_ids: string[];
+    staff_ids?: number[];
   }) => {
     return apiClient.post<{ module: any }>('/modules', data);
   },
@@ -314,7 +314,7 @@ export const modulesApi = {
     category: string;
     sub_modules_count: number;
     amount: number;
-    staff_ids: string[];
+    staff_ids?: number[];
   }) => {
     return apiClient.put<{ module: any }>(`/modules/${id}`, data);
   },
