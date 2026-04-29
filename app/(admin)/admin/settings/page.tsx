@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { useTheme } from "@/app/contexts/ThemeContext";
+import {
+  FONT_SCALE_DEFAULT_PERCENT,
+  FONT_SCALE_MAX_PERCENT,
+  FONT_SCALE_MIN_PERCENT,
+  useFontScale,
+} from "@/app/contexts/FontScaleContext";
 import { authApi } from "@/app/lib/api";
 import { useAppNotice } from "@/app/contexts/AppNoticeContext";
 import { Moon, Sun } from "lucide-react";
@@ -9,6 +15,7 @@ import { Button } from "@/components/ui/button";
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
+  const { scalePercent, setScalePercent, reset } = useFontScale();
   const { showNotice } = useAppNotice();
   const [savingPassword, setSavingPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -50,6 +57,57 @@ export default function SettingsPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               If you don’t see changes immediately, refresh the page.
             </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="card bg-card border border-border shadow-sm">
+        <div className="card-body p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-base font-semibold text-foreground">Font size</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Make text smaller or larger across the admin portal.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="badge badge-outline badge-sm">{scalePercent}%</span>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 px-3"
+                onClick={reset}
+                title="Reset to default"
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:max-w-xl">
+            <input
+              type="range"
+              min={FONT_SCALE_MIN_PERCENT}
+              max={FONT_SCALE_MAX_PERCENT}
+              step={1}
+              value={scalePercent}
+              onChange={(e) => setScalePercent(Number(e.target.value))}
+              className="range range-primary"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{FONT_SCALE_MIN_PERCENT}%</span>
+              <span>Default {FONT_SCALE_DEFAULT_PERCENT}%</span>
+              <span>{FONT_SCALE_MAX_PERCENT}%</span>
+            </div>
+
+            <div className="rounded-lg border border-border bg-muted/40 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Preview
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                This is a sample line so you can judge readability before leaving this page.
+              </p>
+            </div>
           </div>
         </div>
       </div>

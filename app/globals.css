@@ -104,6 +104,7 @@
 
   html {
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 15.2px; /* 16px * 0.95 default; user can change in Settings */
   }
 }
 
