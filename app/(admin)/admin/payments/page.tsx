@@ -394,7 +394,6 @@ export default function PaymentsPage() {
       }
 
       // BarcodeDetector is supported in modern Chrome/Edge. If not available, user can still paste/enter barcode.
-      // @ts-expect-error - BarcodeDetector is a browser API not in all TS libs
       if (typeof BarcodeDetector === "undefined") {
         setQrScannerError("QR scanning is not supported in this browser. Please type the barcode manually.");
         return;
@@ -410,14 +409,12 @@ export default function PaymentsPage() {
         qrVideoRef.current.srcObject = qrStreamRef.current;
         await qrVideoRef.current.play();
 
-        // @ts-expect-error - BarcodeDetector is a browser API not in all TS libs
         detector = new BarcodeDetector({ formats: ["qr_code"] });
 
         const scan = async () => {
           if (cancelled) return;
           try {
             if (qrVideoRef.current && detector) {
-              // @ts-expect-error - type missing in TS lib
               const codes = await detector.detect(qrVideoRef.current);
               const first = codes?.[0];
               const raw = first?.rawValue;
