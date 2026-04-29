@@ -191,6 +191,36 @@ export const authApi = {
       localStorage.removeItem('auth_token');
     }
   },
+
+  changePassword: async (data: {
+    current_password: string;
+    new_password: string;
+    new_password_confirmation: string;
+  }) => {
+    return apiClient.post<{ message: string }>("/auth/change-password", data);
+  },
+
+  uploadProfileImage: async (image: File) => {
+    const fd = new FormData();
+    fd.append("image", image);
+    return apiClient.post<{ user: any }>("/auth/profile-image", fd);
+  },
+};
+
+// Notes API (Super Admin only)
+export const notesApi = {
+  list: async () => {
+    return apiClient.get<{ notes: any[] }>("/notes");
+  },
+  create: async (data: { title?: string | null; body: string }) => {
+    return apiClient.post<{ note: any }>("/notes", data);
+  },
+  update: async (id: string, data: { title?: string | null; body: string }) => {
+    return apiClient.put<{ note: any }>(`/notes/${id}`, data);
+  },
+  delete: async (id: string) => {
+    return apiClient.delete<{ message: string }>(`/notes/${id}`);
+  },
 };
 
 // Roles API
@@ -277,6 +307,7 @@ export const modulesApi = {
     sub_modules_count: number;
     amount: number;
     staff_ids?: number[];
+    sub_modules?: Array<{ id?: number; name: string; sort_order?: number }>;
   }) => {
     return apiClient.post<{ module: any }>('/modules', data);
   },
@@ -287,6 +318,7 @@ export const modulesApi = {
     sub_modules_count: number;
     amount: number;
     staff_ids?: number[];
+    sub_modules?: Array<{ id?: number; name: string; sort_order?: number }>;
   }) => {
     return apiClient.put<{ module: any }>(`/modules/${id}`, data);
   },
@@ -307,52 +339,13 @@ export const studentsApi = {
     return apiClient.get<{ student: any }>(`/students/${id}`);
   },
 
-  create: async (data: {
-    first_name: string;
-    last_name: string;
-    date_of_birth: string;
-    gender: string;
-    nic_number?: string;
-    personal_phone: string;
-    parent_phone: string;
-    personal_phone_has_whatsapp: boolean;
-    parent_phone_has_whatsapp: boolean;
-    admission_batch: string;
-    address: string;
-    school_name?: string;
-    blood_group?: string;
-    medical_notes?: string;
-    image_path?: string;
-    module_ids: number[];
-    payment_type: string;
-    paid_amount?: number;
-    status?: string;
-  }) => {
-    return apiClient.post<{ student: any }>('/students', data);
+  create: async (data: FormData) => {
+    return apiClient.post<{ student: any }>("/students", data);
   },
 
-  update: async (id: string, data: {
-    first_name: string;
-    last_name: string;
-    date_of_birth: string;
-    gender: string;
-    nic_number?: string;
-    personal_phone: string;
-    parent_phone: string;
-    personal_phone_has_whatsapp: boolean;
-    parent_phone_has_whatsapp: boolean;
-    admission_batch: string;
-    address: string;
-    school_name?: string;
-    blood_group?: string;
-    medical_notes?: string;
-    image_path?: string;
-    module_ids: number[];
-    payment_type: string;
-    paid_amount?: number;
-    status: string;
-  }) => {
-    return apiClient.put<{ student: any }>(`/students/${id}`, data);
+  /** Use POST with multipart so profile `image` uploads work (same handler as PUT). */
+  update: async (id: string, data: FormData) => {
+    return apiClient.post<{ student: any }>(`/students/${id}`, data);
   },
 
   delete: async (id: string) => {

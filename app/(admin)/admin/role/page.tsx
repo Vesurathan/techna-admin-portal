@@ -21,6 +21,7 @@ const allPermissions: Permission[] = [
   "reports",
   "photo_library",
   "role",
+  "notes",
 ];
 
 const permissionLabels: Record<Permission, string> = {
@@ -36,6 +37,7 @@ const permissionLabels: Record<Permission, string> = {
   reports: "Reports",
   photo_library: "Drive & website gallery",
   role: "Role",
+  notes: "Notes",
 };
 
 export default function RolePage() {
@@ -185,7 +187,7 @@ export default function RolePage() {
         </div>
       </div>
 
-      <div className="card bg-card border border-border shadow-md">
+      <div className="card bg-card border border-border shadow-md overflow-hidden">
         <div className="card-body p-0">
           {loading ? (
             <div className="flex justify-center py-12">

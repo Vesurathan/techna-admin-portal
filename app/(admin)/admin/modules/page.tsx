@@ -29,6 +29,14 @@ import Pagination from "@/app/components/Pagination";
 import { useAppNotice } from "@/app/contexts/AppNoticeContext";
 
 export default function ModulesPage() {
+  const getErrorMessage = (error: unknown) => {
+    if (error && typeof error === "object" && "message" in error) {
+      const msg = (error as { message?: unknown }).message;
+      if (typeof msg === "string" && msg.trim()) return msg;
+    }
+    return "Something went wrong";
+  };
+
   const { showNotice } = useAppNotice();
   const [modules, setModules] = useState<Module[]>([]);
   const [staffs, setStaffs] = useState<Staff[]>([]);
@@ -52,6 +60,7 @@ export default function ModulesPage() {
     name: "",
     category: "main" as ModuleCategory,
     subModulesCount: 0,
+    subModules: [] as Array<{ id?: string; name: string; sortOrder: number }>,
     amount: 0,
     staffIds: [] as string[],
   });
@@ -77,36 +86,59 @@ export default function ModulesPage() {
         setCurrentPage(modulesRes.pagination.current_page);
       }
 
-      const mappedModules: Module[] = modulesRes.modules.map((m: any) => ({
-        id: m.id.toString(),
-        name: m.name,
-        category: m.category,
-        subModulesCount: m.sub_modules_count ?? m.subModulesCount ?? 0,
-        amount: Number(m.amount ?? 0),
-        staffs: (m.staffs || []).map((s: any) => {
-          const firstName = s.first_name || s.firstName || "";
-          const lastName = s.last_name || s.lastName || "";
-          const fullName = s.full_name || s.fullName || `${firstName} ${lastName}`.trim() || s.name || "Unknown";
-          return {
-            id: s.id.toString(),
-            name: fullName,
-            email: s.email || "",
-            department: s.department ?? null,
-            phone: s.phone ?? s.secondary_phone ?? null,
-          };
-        }),
-      }));
+      const mappedModules: Module[] = (modulesRes.modules as unknown[]).map((raw) => {
+        const m = raw as Record<string, unknown>;
+        const subModulesRaw = (m.sub_modules as unknown[]) ?? [];
+        const staffsRaw = (m.staffs as unknown[]) ?? [];
 
-      const mappedStaffs: Staff[] = staffsRes.staffs.map((s: any) => {
-        const firstName = s.first_name || s.firstName || "";
-        const lastName = s.last_name || s.lastName || "";
-        const fullName = s.full_name || s.fullName || `${firstName} ${lastName}`.trim() || s.name || "Unknown";
         return {
-          id: s.id.toString(),
+          id: String(m.id ?? ""),
+          name: String(m.name ?? ""),
+          category: m.category as ModuleCategory,
+          subModulesCount: Number(m.sub_modules_count ?? (m as { subModulesCount?: unknown }).subModulesCount ?? 0),
+          subModules: subModulesRaw.map((smRaw) => {
+            const sm = smRaw as Record<string, unknown>;
+            return {
+              id: String(sm.id ?? ""),
+              name: String(sm.name ?? ""),
+              sortOrder: Number(sm.sort_order ?? (sm as { sortOrder?: unknown }).sortOrder ?? 0),
+            };
+          }),
+          amount: Number(m.amount ?? 0),
+          staffs: staffsRaw.map((sRaw) => {
+            const s = sRaw as Record<string, unknown>;
+            const firstName = String(s.first_name ?? (s as { firstName?: unknown }).firstName ?? "");
+            const lastName = String(s.last_name ?? (s as { lastName?: unknown }).lastName ?? "");
+            const fullName =
+              String(s.full_name ?? (s as { fullName?: unknown }).fullName ?? "").trim() ||
+              `${firstName} ${lastName}`.trim() ||
+              String(s.name ?? "Unknown");
+
+            return {
+              id: String(s.id ?? ""),
+              name: fullName,
+              email: String(s.email ?? ""),
+              department: (s.department as string | null | undefined) ?? null,
+              phone: (s.phone as string | null | undefined) ?? ((s as { secondary_phone?: unknown }).secondary_phone as string | null | undefined) ?? null,
+            };
+          }),
+        };
+      });
+
+      const mappedStaffs: Staff[] = (staffsRes.staffs as unknown[]).map((sRaw) => {
+        const s = sRaw as Record<string, unknown>;
+        const firstName = String(s.first_name ?? (s as { firstName?: unknown }).firstName ?? "");
+        const lastName = String(s.last_name ?? (s as { lastName?: unknown }).lastName ?? "");
+        const fullName =
+          String(s.full_name ?? (s as { fullName?: unknown }).fullName ?? "").trim() ||
+          `${firstName} ${lastName}`.trim() ||
+          String(s.name ?? "Unknown");
+        return {
+          id: String(s.id ?? ""),
           name: fullName,
-          email: s.email || "",
-          department: s.department ?? null,
-          phone: s.phone ?? s.secondary_phone ?? null,
+          email: String(s.email ?? ""),
+          department: (s.department as string | null | undefined) ?? null,
+          phone: (s.phone as string | null | undefined) ?? ((s as { secondary_phone?: unknown }).secondary_phone as string | null | undefined) ?? null,
         };
       });
 
@@ -129,6 +161,7 @@ export default function ModulesPage() {
       name: "",
       category: "main",
       subModulesCount: 0,
+      subModules: [],
       amount: 0,
       staffIds: [],
     });
@@ -141,6 +174,11 @@ export default function ModulesPage() {
       name: module.name,
       category: module.category,
       subModulesCount: module.subModulesCount,
+      subModules: (module.subModules || []).map((sm) => ({
+        id: sm.id,
+        name: sm.name,
+        sortOrder: sm.sortOrder,
+      })),
       amount: module.amount,
       staffIds: module.staffs.map((s) => s.id),
     });
@@ -160,12 +198,22 @@ export default function ModulesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const normalizedSubModules = formData.subModules
+        .map((sm) => ({
+          id: sm.id ? parseInt(sm.id, 10) : undefined,
+          name: sm.name.trim(),
+          sort_order: Number(sm.sortOrder ?? 0),
+        }))
+        .filter((sm) => sm.name !== "");
+
       const payload = {
         name: formData.name,
         category: formData.category,
-        sub_modules_count: Number(formData.subModulesCount),
+        sub_modules_count:
+          normalizedSubModules.length > 0 ? normalizedSubModules.length : Number(formData.subModulesCount),
         amount: Number(formData.amount),
         staff_ids: formData.staffIds.map((id) => parseInt(id, 10)),
+        sub_modules: normalizedSubModules.length > 0 ? normalizedSubModules : undefined,
       };
 
       if (modalMode === "edit" && selectedModule) {
@@ -176,9 +224,9 @@ export default function ModulesPage() {
 
       await loadData(currentPage);
       closeModal();
-    } catch (error: any) {
+    } catch (error: unknown) {
       showNotice({
-        message: error.message || "Failed to save module",
+        message: getErrorMessage(error) || "Failed to save module",
         variant: "error",
       });
     }
@@ -190,9 +238,9 @@ export default function ModulesPage() {
       await modulesApi.delete(deleteTarget.id);
       await loadData(currentPage);
       setDeleteTarget(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       showNotice({
-        message: error.message || "Failed to delete module",
+        message: getErrorMessage(error) || "Failed to delete module",
         variant: "error",
       });
     }
@@ -250,7 +298,7 @@ export default function ModulesPage() {
       </div>
 
       {/* Modules Table */}
-      <div className="card bg-card border border-border shadow-md">
+      <div className="card bg-card border border-border shadow-md overflow-hidden">
         <div className="card-body p-0">
           {loading ? (
             <div className="flex justify-center py-12">
@@ -468,6 +516,93 @@ export default function ModulesPage() {
               <div className="form-control">
                 <label className="label">
                   <span className="label-text font-semibold text-foreground">
+                    Sub modules <span className="font-normal text-muted-foreground">(optional)</span>
+                  </span>
+                </label>
+
+                <div className="space-y-2">
+                  {formData.subModules.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No sub modules added. You can still use the count field above, or add a real list here.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {formData.subModules.map((sm, idx) => (
+                        <div
+                          key={sm.id ?? `new-${idx}`}
+                          className="grid grid-cols-1 md:grid-cols-[1fr_140px_auto] gap-2 items-center"
+                        >
+                          <input
+                            type="text"
+                            className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
+                            placeholder={`Sub module ${idx + 1} name`}
+                            value={sm.name}
+                            onChange={(e) => {
+                              const next = [...formData.subModules];
+                              next[idx] = { ...next[idx], name: e.target.value };
+                              setFormData({ ...formData, subModules: next });
+                            }}
+                          />
+                          <input
+                            type="number"
+                            className="input input-bordered w-full border-border focus:border-primary focus:outline-none"
+                            placeholder="Sort order"
+                            value={sm.sortOrder}
+                            min={0}
+                            onChange={(e) => {
+                              const next = [...formData.subModules];
+                              next[idx] = { ...next[idx], sortOrder: Number(e.target.value) };
+                              setFormData({ ...formData, subModules: next });
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm px-3"
+                            onClick={() => {
+                              const next = formData.subModules.filter((_, i) => i !== idx);
+                              setFormData({ ...formData, subModules: next });
+                            }}
+                            title="Remove"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm gap-2"
+                      onClick={() => {
+                        const nextOrder =
+                          formData.subModules.length === 0
+                            ? 1
+                            : Math.max(...formData.subModules.map((x) => Number(x.sortOrder ?? 0))) + 1;
+                        setFormData({
+                          ...formData,
+                          subModules: [...formData.subModules, { name: "", sortOrder: nextOrder }],
+                        });
+                      }}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add sub module
+                    </button>
+                  </div>
+                </div>
+
+                <label className="label pt-1">
+                  <span className="label-text-alt text-muted-foreground">
+                    If you add sub modules here, the backend will automatically set{" "}
+                    <strong>sub module count</strong> to match this list.
+                  </span>
+                </label>
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-semibold text-foreground">
                     Assigned staff <span className="font-normal text-muted-foreground">(optional)</span>
                   </span>
                 </label>
@@ -567,6 +702,21 @@ export default function ModulesPage() {
                 <p className="text-xs text-muted-foreground">Sub-modules</p>
                 <p className="text-sm font-medium text-foreground">{selectedModule.subModulesCount}</p>
               </div>
+              {selectedModule.subModules && selectedModule.subModules.length > 0 && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-muted-foreground">Sub module list</p>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {selectedModule.subModules
+                      .slice()
+                      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+                      .map((sm) => (
+                        <span key={sm.id} className="badge badge-outline badge-sm">
+                          {sm.name}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
               <div className="sm:col-span-2">
                 <p className="text-xs text-muted-foreground">Amount</p>
                 <p className="text-sm font-medium text-foreground">{formatCurrency(selectedModule.amount)}</p>

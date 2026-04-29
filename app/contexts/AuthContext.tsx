@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: response.user.id.toString(),
           name: response.user.name,
           email: response.user.email,
+          profileImageUrl: response.user.profileImageUrl ?? null,
           role: response.user.role
             ? {
                 id: response.user.role.id.toString(),
@@ -80,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: response.user.id.toString(),
         name: response.user.name,
         email: response.user.email,
+        profileImageUrl: response.user.profileImageUrl ?? null,
         role: response.user.role
           ? {
               id: response.user.role.id.toString(),

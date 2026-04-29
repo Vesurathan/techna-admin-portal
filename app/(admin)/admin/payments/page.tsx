@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   CreditCard,
   Search,
@@ -82,6 +82,10 @@ export default function PaymentsPage() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [qrScannerError, setQrScannerError] = useState<string | null>(null);
+  const qrVideoRef = useRef<HTMLVideoElement | null>(null);
+  const qrStreamRef = useRef<MediaStream | null>(null);
 
   // Filters
   const [filterBatch, setFilterBatch] = useState("");
@@ -339,12 +343,133 @@ export default function PaymentsPage() {
 
   const amountAfterDiscount = paymentFormData.amount - paymentFormData.discount_amount;
 
+  const stopQrScanner = useCallback(() => {
+    if (qrStreamRef.current) {
+      for (const t of qrStreamRef.current.getTracks()) {
+        t.stop();
+      }
+      qrStreamRef.current = null;
+    }
+    if (qrVideoRef.current) {
+      qrVideoRef.current.srcObject = null;
+    }
+  }, []);
+
+  const parseBarcodeFromQr = useCallback((raw: string): string | null => {
+    const v = raw.trim();
+    if (!v) return null;
+
+    // Our QR payloads are JSON (see student-qr-payload.ts / staff-qr-payload.ts) like {"b":"..."} or {"barcode":"..."}
+    if (v.startsWith("{") && v.endsWith("}")) {
+      try {
+        const obj = JSON.parse(v) as any;
+        const code = (obj?.barcode ?? obj?.b ?? obj?.id ?? "").toString().trim();
+        return code || null;
+      } catch {
+        // fall through to treat raw as barcode
+      }
+    }
+
+    return v;
+  }, []);
+
+  useEffect(() => {
+    if (!showQrScanner) {
+      stopQrScanner();
+      return;
+    }
+
+    let cancelled = false;
+    let raf = 0;
+    let detector: BarcodeDetector | null = null;
+
+    const start = async () => {
+      setQrScannerError(null);
+
+      if (typeof window === "undefined") return;
+
+      if (!("mediaDevices" in navigator) || !navigator.mediaDevices?.getUserMedia) {
+        setQrScannerError("Camera access is not available in this browser.");
+        return;
+      }
+
+      // BarcodeDetector is supported in modern Chrome/Edge. If not available, user can still paste/enter barcode.
+      // @ts-expect-error - BarcodeDetector is a browser API not in all TS libs
+      if (typeof BarcodeDetector === "undefined") {
+        setQrScannerError("QR scanning is not supported in this browser. Please type the barcode manually.");
+        return;
+      }
+
+      try {
+        qrStreamRef.current = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false,
+        });
+
+        if (!qrVideoRef.current) return;
+        qrVideoRef.current.srcObject = qrStreamRef.current;
+        await qrVideoRef.current.play();
+
+        // @ts-expect-error - BarcodeDetector is a browser API not in all TS libs
+        detector = new BarcodeDetector({ formats: ["qr_code"] });
+
+        const scan = async () => {
+          if (cancelled) return;
+          try {
+            if (qrVideoRef.current && detector) {
+              // @ts-expect-error - type missing in TS lib
+              const codes = await detector.detect(qrVideoRef.current);
+              const first = codes?.[0];
+              const raw = first?.rawValue;
+              if (typeof raw === "string" && raw.trim() !== "") {
+                const barcode = parseBarcodeFromQr(raw);
+                if (barcode) {
+                  setSearchMode("barcode");
+                  setSearchValue(barcode);
+                  setShowQrScanner(false);
+                  // Defer search until state updates settle
+                  setTimeout(() => {
+                    handleSearchStudent();
+                  }, 0);
+                  return;
+                }
+              }
+            }
+          } catch {
+            // ignore per-frame errors
+          }
+          raf = requestAnimationFrame(scan);
+        };
+
+        raf = requestAnimationFrame(scan);
+      } catch (e) {
+        setQrScannerError(
+          e instanceof Error ? e.message : "Unable to start camera. Please check browser permissions."
+        );
+      }
+    };
+
+    void start();
+
+    return () => {
+      cancelled = true;
+      if (raf) cancelAnimationFrame(raf);
+      stopQrScanner();
+    };
+  }, [showQrScanner, stopQrScanner, parseBarcodeFromQr]);
+
   // Generate month options (last 12 months)
   const monthOptions: string[] = [];
-  for (let i = 0; i < 12; i++) {
-    const date = new Date();
-    date.setMonth(date.getMonth() - i);
-    monthOptions.push(date.toISOString().slice(0, 7));
+  {
+    // Use day=1 to avoid month rollover issues (e.g. Mar 31 -> Feb becomes Mar 03)
+    const now = new Date();
+    const base = new Date(now.getFullYear(), now.getMonth(), 1);
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      monthOptions.push(`${yyyy}-${mm}`);
+    }
   }
 
   // Generate year options (last 5 years)
@@ -408,11 +533,61 @@ export default function PaymentsPage() {
                 >
                   <Search className="h-5 w-5" />
                 </button>
+                {searchMode === "barcode" ? (
+                  <button
+                    type="button"
+                    className="btn btn-outline flex-shrink-0"
+                    onClick={() => setShowQrScanner(true)}
+                    title="Scan student QR code"
+                  >
+                    <Scan className="h-5 w-5" />
+                  </button>
+                ) : null}
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* QR scanner dialog (payments search) */}
+      {showQrScanner ? (
+        <div className="modal modal-open">
+          <div className="modal-box bg-card border border-border max-w-lg w-full mx-4">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-semibold text-foreground">Scan student QR</h3>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setShowQrScanner(false)}
+                title="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="mt-2 text-sm text-muted-foreground">
+              Point the camera at the student QR code. We’ll auto-fill the barcode and load the student.
+            </p>
+
+            {qrScannerError ? (
+              <div className="alert alert-warning mt-4">
+                <span className="text-sm">{qrScannerError}</span>
+              </div>
+            ) : (
+              <div className="mt-4 overflow-hidden rounded-lg border border-border bg-black">
+                <video ref={qrVideoRef} className="h-72 w-full object-cover" playsInline muted />
+              </div>
+            )}
+
+            <div className="modal-action">
+              <button type="button" className="btn btn-ghost" onClick={() => setShowQrScanner(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+          <div className="modal-backdrop" onClick={() => setShowQrScanner(false)} />
+        </div>
+      ) : null}
 
       {/* Filters */}
       <div className="card bg-card border border-border shadow-sm">
@@ -531,7 +706,7 @@ export default function PaymentsPage() {
       </div>
 
       {/* Payments List */}
-      <div className="card bg-card border border-border shadow-md">
+      <div className="card bg-card border border-border shadow-md overflow-hidden">
         <div className="card-body p-0">
           {loading ? (
             <div className="flex justify-center py-12">

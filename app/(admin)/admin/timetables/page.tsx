@@ -579,7 +579,7 @@ export default function TimetablesPage() {
       </div>
 
       {/* Timetables List */}
-      <div className="card bg-card border border-border shadow-md">
+      <div className="card bg-card border border-border shadow-md overflow-hidden">
         <div className="card-body p-0">
           {loading ? (
             <div className="flex justify-center py-12">

@@ -1041,7 +1041,7 @@ export default function QuestionBankPage() {
 
       {/* Questions List or Questionnaire List */}
       {activeTab !== "questionnaire" ? (
-        <div className="card bg-card border border-border shadow-md">
+        <div className="card bg-card border border-border shadow-md overflow-hidden">
           <div className="card-body p-0">
             {loading ? (
               <div className="flex justify-center py-12">
@@ -1180,7 +1180,7 @@ export default function QuestionBankPage() {
         </div>
       ) : (
         /* Questionnaire List */
-        <div className="card bg-card border border-border shadow-md">
+        <div className="card bg-card border border-border shadow-md overflow-hidden">
           <div className="card-body p-0">
             {loading ? (
               <div className="flex justify-center py-12">

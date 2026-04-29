@@ -10,7 +10,8 @@ export type Permission =
   | "salary_payroll"
   | "reports"
   | "role"
-  | "photo_library";
+  | "photo_library"
+  | "notes";
 
 export interface Role {
   id: string;
@@ -23,5 +24,6 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  profileImageUrl?: string | null;
   role: Role;
 }

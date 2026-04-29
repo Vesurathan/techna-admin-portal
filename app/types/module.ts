@@ -13,6 +13,11 @@ export interface Module {
   name: string;
   category: ModuleCategory;
   subModulesCount: number;
+  subModules?: Array<{
+    id: string;
+    name: string;
+    sortOrder: number;
+  }>;
   amount: number;
   staffs: Staff[];
 }

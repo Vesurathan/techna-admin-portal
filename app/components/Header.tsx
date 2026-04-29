@@ -4,6 +4,8 @@ import { useTheme } from "@/app/contexts/ThemeContext";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { Moon, Sun, User, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { PersonAvatar } from "@/app/components/PersonAvatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +19,7 @@ import {
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
+  const router = useRouter();
 
   const handleLogout = async () => {
     await logout();
@@ -46,9 +49,13 @@ export default function Header() {
 
         <DropdownMenu>
           <DropdownMenuTrigger className="inline-flex min-w-0 max-w-full shrink-0 items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-1.5 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring sm:px-3">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground sm:size-10 sm:text-sm">
-              {user?.name?.charAt(0).toUpperCase() || "U"}
-            </div>
+            <PersonAvatar
+              imageUrl={user?.profileImageUrl}
+              firstName={user?.name?.split(" ")?.[0] || user?.name || "User"}
+              lastName={user?.name?.split(" ")?.slice(1).join(" ") || ""}
+              alt={user?.name || "User"}
+              size="sm"
+            />
             <div className="hidden min-w-0 max-w-[140px] flex-col items-start text-sm sm:flex">
               <span className="w-full truncate font-semibold text-foreground">{user?.name}</span>
               <span className="w-full truncate text-xs text-muted-foreground">{user?.role.name}</span>
@@ -57,11 +64,11 @@ export default function Header() {
           <DropdownMenuContent align="end" className="min-w-56">
             <DropdownMenuGroup>
               <DropdownMenuLabel>Account</DropdownMenuLabel>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/admin/profile")}>
                 <User className="h-4 w-4" />
                 Profile
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/admin/settings")}>
                 <Settings className="h-4 w-4" />
                 Settings
               </DropdownMenuItem>

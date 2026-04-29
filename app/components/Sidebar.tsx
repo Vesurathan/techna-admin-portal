@@ -25,6 +25,7 @@ import {
   HardDrive,
   Wallet,
   Images,
+  StickyNote,
 } from "lucide-react";
 
 interface NavItem {
@@ -69,6 +70,10 @@ export default function Sidebar() {
 
   const homeNav = !isSuperAdmin()
     ? [{ label: "Home", href: "/admin/home", icon: Home, key: "home" as const }]
+    : [];
+
+  const notesNav = hasPermission("notes") || isSuperAdmin()
+    ? [{ label: "Notes", href: "/admin/notes", icon: StickyNote, key: "notes" as const }]
     : [];
 
   return (
@@ -137,6 +142,33 @@ export default function Sidebar() {
               return (
                 <motion.li
                   key={item.href}
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                >
+                  <Link
+                    href={item.href}
+                    title={!isExpanded ? item.label : undefined}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg transition-colors",
+                      isExpanded ? "px-4 py-3" : "justify-center px-3 py-3",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <Icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary-foreground")} />
+                    {isExpanded && <span className="whitespace-nowrap font-medium">{item.label}</span>}
+                  </Link>
+                </motion.li>
+              );
+            })}
+
+            {notesNav.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <motion.li
+                  key={item.key}
                   initial={false}
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 >

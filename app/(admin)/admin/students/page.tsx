@@ -288,6 +288,46 @@ export default function StudentsPage() {
     }
   };
 
+  const buildStudentFormData = (): FormData => {
+    const fd = new FormData();
+    fd.append("first_name", formData.firstName.trim());
+    fd.append("last_name", formData.lastName.trim());
+    fd.append("date_of_birth", formData.dateOfBirth);
+    fd.append("gender", formData.gender);
+
+    const nic = formData.nicNumber.trim();
+    if (nic) fd.append("nic_number", nic);
+
+    fd.append("personal_phone", formData.personalPhone.trim());
+    fd.append("parent_phone", formData.parentPhone.trim());
+    fd.append("personal_phone_has_whatsapp", formData.personalPhoneHasWhatsapp ? "1" : "0");
+    fd.append("parent_phone_has_whatsapp", formData.parentPhoneHasWhatsapp ? "1" : "0");
+
+    fd.append("admission_batch", formData.admissionBatch.trim());
+    fd.append("address", formData.address);
+
+    const school = formData.schoolName.trim();
+    if (school) fd.append("school_name", school);
+
+    const bg = formData.bloodGroup.trim();
+    if (bg) fd.append("blood_group", bg);
+
+    const med = formData.medicalNotes.trim();
+    if (med) fd.append("medical_notes", med);
+
+    formData.moduleIds.forEach((id) => fd.append("module_ids[]", id));
+
+    fd.append("payment_type", formData.paymentType);
+    fd.append("paid_amount", String(formData.paymentType === "full" ? totalPayment : 500));
+    fd.append("status", formData.status);
+
+    if (formData.imageFile) {
+      fd.append("image", formData.imageFile);
+    }
+
+    return fd;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -301,37 +341,12 @@ export default function StudentsPage() {
     }
 
     try {
-      // TODO: Upload image to S3 first, then get image_path
-      // For now, we'll skip image upload and set it to null
-      // In production, you'll need an image upload endpoint
-      const image_path = null; // Will be set after S3 upload
-
-      const payload = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        date_of_birth: formData.dateOfBirth,
-        gender: formData.gender,
-        nic_number: formData.nicNumber || null,
-        personal_phone: formData.personalPhone,
-        parent_phone: formData.parentPhone,
-        personal_phone_has_whatsapp: formData.personalPhoneHasWhatsapp,
-        parent_phone_has_whatsapp: formData.parentPhoneHasWhatsapp,
-        admission_batch: formData.admissionBatch,
-        address: formData.address,
-        school_name: formData.schoolName || null,
-        blood_group: formData.bloodGroup || null,
-        medical_notes: formData.medicalNotes || null,
-        image_path: image_path,
-        module_ids: formData.moduleIds.map((id) => parseInt(id)),
-        payment_type: formData.paymentType,
-        paid_amount: formData.paymentType === "full" ? totalPayment : 500,
-        status: formData.status,
-      };
+      const payload = buildStudentFormData();
 
       if (modalMode === "edit" && selectedStudent) {
-        await studentsApi.update(selectedStudent.id, payload as any);
+        await studentsApi.update(selectedStudent.id, payload);
       } else {
-        const created = await studentsApi.create(payload as any);
+        const created = await studentsApi.create(payload);
         if (created.student) {
           setNewStudentForQr(mapApiStudentRecord(created.student));
         }
@@ -441,7 +456,7 @@ export default function StudentsPage() {
       </div>
 
       {/* Students Table */}
-      <div className="card min-w-0 max-w-full bg-card border border-border shadow-md">
+      <div className="card min-w-0 max-w-full bg-card border border-border shadow-md overflow-hidden">
         <div className="card-body min-w-0 p-0">
           {loading ? (
             <div className="flex justify-center py-12">
@@ -1211,26 +1226,6 @@ export default function StudentsPage() {
               <p className="mt-2 text-xs text-muted-foreground">
                 Total {formatCurrency(selectedStudent.moduleTotalAmount)}
               </p>
-            </div>
-
-            <div>
-              <RecordDetailSectionTitle>Payment</RecordDetailSectionTitle>
-              <div className="rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm">
-                <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">Admission</span>
-                  <span className="font-medium">{formatCurrency(selectedStudent.admissionFee)}</span>
-                </div>
-                {selectedStudent.moduleTotalAmount > 0 ? (
-                  <div className="mt-1.5 flex justify-between gap-2">
-                    <span className="text-muted-foreground">Modules</span>
-                    <span className="font-medium">{formatCurrency(selectedStudent.moduleTotalAmount)}</span>
-                  </div>
-                ) : null}
-                <div className="mt-2 flex justify-between gap-2 border-t border-border pt-2">
-                  <span className="font-semibold text-foreground">Paid</span>
-                  <span className="font-semibold text-primary">{formatCurrency(selectedStudent.paidAmount)}</span>
-                </div>
-              </div>
             </div>
           </div>
         )}
